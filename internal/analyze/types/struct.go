@@ -22,14 +22,6 @@ func MakeStructType(res *ast.StructType) *StructType {
 	}
 }
 
-func (st *StructType) AddField(res *ast.Ident) {
-	st.Field[res.Name] = MakeFieldType(res)
-}
-
-func (st *StructType) End() token.Pos {
-	return st.end
-}
-
 func extractFieldMap(fieldList []*ast.Field) map[string]*FieldType {
 	fieldMap := make(map[string]*FieldType)
 
