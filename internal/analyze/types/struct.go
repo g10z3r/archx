@@ -10,7 +10,7 @@ type StructType struct {
 	pos    token.Pos
 	end    token.Pos
 	Field  map[string]*FieldType
-	Method map[string][]string
+	Method map[string]map[string]struct{}
 }
 
 func MakeStructType(res *ast.StructType) *StructType {
@@ -18,7 +18,7 @@ func MakeStructType(res *ast.StructType) *StructType {
 		pos:    res.Pos(),
 		end:    res.End(),
 		Field:  extractFieldMap(res.Fields.List),
-		Method: make(map[string][]string),
+		Method: make(map[string]map[string]struct{}),
 	}
 }
 

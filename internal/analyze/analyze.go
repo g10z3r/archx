@@ -59,9 +59,11 @@ func ParseGoFile(filePath string) (types.NodeType, error) {
 			})
 
 			for fieldName := range usedFields {
-				nodeData[currentStructName].Method[methodName] = append(
-					nodeData[currentStructName].Method[methodName], fieldName,
-				)
+				if nodeData[currentStructName].Method[methodName] == nil {
+					nodeData[currentStructName].Method[methodName] = make(map[string]struct{})
+				}
+
+				nodeData[currentStructName].Method[methodName][fieldName] = struct{}{}
 			}
 
 		}
