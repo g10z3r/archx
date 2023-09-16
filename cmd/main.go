@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	data, err := analyze.ParseGoFile("./example.go")
+	data, err := analyze.ParseGoFile("./example/main.go")
 	if err != nil {
 		fmt.Println("Error analyzing Go file:", err)
 		return
