@@ -5,21 +5,28 @@ import (
 	"fmt"
 
 	"github.com/g10z3r/archx/internal/analyze"
+	"github.com/g10z3r/archx/internal/analyze/snapshot"
 )
 
 func main() {
-	data, err := analyze.MustParseGoFile("./example/main.go")
+	snapshot := snapshot.NewSnapshot()
+	fileManifest, err := analyze.ParseGoFile("./example/main.go")
 	if err != nil {
-		fmt.Println("Error analyzing Go file:", err)
+		fmt.Println(err)
 		return
 	}
 
-	for nodeName, node := range data {
-		fmt.Printf("LCOM96 for %s = %f\n", nodeName, analyze.CalculateLCOM96B(node))
-		fmt.Printf("LCOM for %s = %f\n", nodeName, analyze.CalculateLCOM(node))
+	if err := snapshot.UpdateFromFileManifest(fileManifest); err != nil {
+		fmt.Println(err)
+		return
 	}
 
-	jsonData, err := json.Marshal(data)
+	// for nodeName, node := range data {
+	// 	fmt.Printf("LCOM96 for %s = %f\n", nodeName, analyze.CalculateLCOM96B(node))
+	// 	fmt.Printf("LCOM for %s = %f\n", nodeName, analyze.CalculateLCOM(node))
+	// }
+
+	jsonData, err := json.Marshal(snapshot)
 	if err != nil {
 		fmt.Println(err)
 		return
