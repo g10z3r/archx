@@ -1,9 +1,10 @@
-package metric
+package analyze
 
 import "github.com/g10z3r/archx/internal/analyze/types"
 
 const (
-	defaultLCOMValue = 0.0
+	defaultLCOMValue         = 0.0
+	defaultAbstractnessValue = 0.0
 )
 
 func CalculateLCOM(s *types.StructType) float32 {
