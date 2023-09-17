@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path"
 	"path/filepath"
 
 	"github.com/g10z3r/archx/internal/analyze/snapshot"
@@ -18,7 +19,7 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 	}
 
 	pkgDir, _ := filepath.Split(filePath)
-	pkgPath := fmt.Sprintf("%s%s", pkgDir, pkgName)
+	pkgPath := path.Join(pkgDir, pkgName)
 	fileManifest := snapshot.NewFileManifest(pkgPath)
 
 	fset, node, err := parseFile(filePath)
@@ -27,6 +28,8 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 	}
 
 	var currentStructName string
+	// Using map to collect methods information efficiently without multiple AST Inspect calls
+	methodsInfo := make(map[string]map[string]struct{})
 
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch t := n.(type) {
@@ -64,109 +67,36 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 			}
 
 			// Collect information about the fields used within this method
-			usedFields := make(map[string]bool)
+			methodFields, exists := methodsInfo[methodName]
+			if !exists {
+				methodFields = map[string]struct{}{}
+				methodsInfo[methodName] = methodFields
+			}
+
 			ast.Inspect(t, func(n ast.Node) bool {
 				if ident, ok := n.(*ast.Ident); ok {
 					if exists, _ := fileManifest.IsFieldPresent(currentStructName, ident.Name); exists {
-						usedFields[ident.Name] = true
+						methodFields[ident.Name] = struct{}{}
 					}
 				}
-
 				return true
 			})
-
-			for fieldName := range usedFields {
-				if err := fileManifest.AddMethodToStruct(currentStructName, methodName, fieldName); err != nil {
-					return false
-				}
-			}
 
 		}
 		return true
 	})
 
+	// Add methods information to FileManifest outside the AST inspect to avoid repeated work
+	for methodName, fields := range methodsInfo {
+		for fieldName := range fields {
+			if err := fileManifest.AddMethodToStruct(currentStructName, methodName, fieldName); err != nil {
+				return nil, err // Handle error properly instead of returning false
+			}
+		}
+	}
+
 	return fileManifest, nil
 }
-
-// func MustParseGoFile(filePath string) *SnapshotManifest {
-// 	pkg, err := parsePackage(filePath)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	if Snapshot == nil {
-// 		Snapshot = NewSnapshot()
-// 	}
-
-// 	pkgPath := Snapshot.UpsertPackageManifest(filePath, pkg)
-
-// 	fset, node, err := parseFile(filePath)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	var currentStructName string
-
-// 	ast.Inspect(node, func(n ast.Node) bool {
-// 		switch t := n.(type) {
-// 		case *ast.TypeSpec:
-// 			if structType, ok := t.Type.(*ast.StructType); ok {
-// 				currentStructName = t.Name.String()
-// 				sType, err := types.NewStructType(fset, structType, types.NotEmbedded)
-// 				if err != nil {
-// 					panic(err)
-// 				}
-
-// 				Snapshot.AddStructType(pkgPath, currentStructName, sType)
-// 			}
-
-// 		case *ast.FuncDecl:
-// 			if t.Recv == nil || len(t.Recv.List) == 0 {
-// 				return true
-// 			}
-
-// 			se, ok := t.Recv.List[0].Type.(*ast.StarExpr)
-// 			if !ok {
-// 				return true
-// 			}
-
-// 			ident, ok := se.X.(*ast.Ident)
-// 			if !ok {
-// 				return true
-// 			}
-
-// 			currentStructName = ident.Name
-// 			methodName := t.Name.Name
-
-// 			if !Snapshot.HasStructType(pkgPath, currentStructName) {
-// 				return true
-// 			}
-
-// 			// Collect information about the fields used within this method
-// 			usedFields := make(map[string]bool)
-// 			ast.Inspect(t, func(n ast.Node) bool {
-// 				if ident, ok := n.(*ast.Ident); ok {
-// 					if exists, _ := Snapshot.IsFieldPresent(pkgPath, currentStructName, ident.Name); exists {
-// 						usedFields[ident.Name] = true
-// 					}
-// 				}
-
-// 				return true
-// 			})
-
-// 			for fieldName := range usedFields {
-// 				if err := Snapshot.AddMethodToStruct(pkgPath, currentStructName, methodName, fieldName); err != nil {
-// 					panic(err)
-// 				}
-
-// 			}
-
-// 		}
-// 		return true
-// 	})
-
-// 	return Snapshot
-// }
 
 func parseFile(filePath string) (*token.FileSet, *ast.File, error) {
 	fset := token.NewFileSet()

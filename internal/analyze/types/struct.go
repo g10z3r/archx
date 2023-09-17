@@ -17,8 +17,6 @@ const (
 	CustomTypeStruct = "struct"
 )
 
-type NodeType map[string]*StructType
-
 type StructType struct {
 	_          [0]int
 	pos        token.Pos
@@ -34,7 +32,7 @@ func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*
 		return nil, err
 	}
 
-	var method map[string]map[string]struct{}
+	method := map[string]map[string]struct{}{}
 	if !isEmbedded {
 		method = make(map[string]map[string]struct{})
 	}
@@ -53,32 +51,12 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (map[string]*F
 		return nil, nil
 	}
 
-	var (
-		embedded        *StructType
-		fieldTypeString string
-		err             error
-	)
-
 	fieldMap := make(map[string]*FieldType, len(fieldList))
+
 	for _, field := range fieldList {
-		// Check that the current field is not a structure, since built-in structures are possible
-		switch fieldType := field.Type.(type) {
-		case *ast.StructType:
-			// Rename here coz otherwise will be just a JSON string of embedded structure
-			fieldTypeString = CustomTypeStruct
-			embedded, err = NewStructType(fset, fieldType, Embedded)
-			if err != nil {
-				return nil, err
-			}
-
-		default:
-			// Getting the field type
-			var buf bytes.Buffer
-			if err := format.Node(&buf, fset, field.Type); err != nil {
-				return nil, fmt.Errorf("Failed to format node: %v", err)
-			}
-
-			fieldTypeString = buf.String()
+		fieldTypeString, embedded, err := extractFieldType(fset, field.Type)
+		if err != nil {
+			return nil, err
 		}
 
 		for _, name := range field.Names {
@@ -93,6 +71,24 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (map[string]*F
 	}
 
 	return fieldMap, nil
+}
+
+func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (string, *StructType, error) {
+	switch ft := fieldType.(type) {
+	case *ast.StructType:
+		embedded, err := NewStructType(fset, ft, Embedded)
+		if err != nil {
+			return "", nil, err
+		}
+		return CustomTypeStruct, embedded, nil
+
+	default:
+		var buf bytes.Buffer
+		if err := format.Node(&buf, fset, fieldType); err != nil {
+			return "", nil, fmt.Errorf("failed to format node: %v", err)
+		}
+		return buf.String(), nil, nil
+	}
 }
 
 type FieldType struct {
