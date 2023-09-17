@@ -9,6 +9,14 @@ type PackageManifest struct {
 	InterfaceTypeMap map[string]*types.InterfaceType `json:"AbstractMap"`
 }
 
+func (pm *PackageManifest) CountInterfaces() int {
+	return len(pm.InterfaceTypeMap)
+}
+
+func (pm *PackageManifest) CountStructs() int {
+	return len(pm.StructTypeMap)
+}
+
 func NewPackageManifest() *PackageManifest {
 	return &PackageManifest{
 		StructTypeMap:    make(map[string]*types.StructType),

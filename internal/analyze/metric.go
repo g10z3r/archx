@@ -7,6 +7,14 @@ const (
 	defaultAbstractnessValue = 0.0
 )
 
+func CalculateAbstractness(abstractEntities int, specificEntities int) float32 {
+	if abstractEntities == 0 && specificEntities == 0 {
+		return defaultAbstractnessValue
+	}
+
+	return float32(abstractEntities) / float32(abstractEntities+specificEntities)
+}
+
 func CalculateLCOM(s *types.StructType) float32 {
 	if s == nil || len(s.Method) == 0 || len(s.Field) == 0 {
 		return defaultLCOMValue
