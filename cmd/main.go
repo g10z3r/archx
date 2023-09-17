@@ -5,19 +5,18 @@ import (
 	"fmt"
 
 	"github.com/g10z3r/archx/internal/analyze"
-	"github.com/g10z3r/archx/internal/metric"
 )
 
 func main() {
-	data, err := analyze.ParseGoFile("./example/main.go")
+	data, err := analyze.MustParseGoFile("./example/main.go")
 	if err != nil {
 		fmt.Println("Error analyzing Go file:", err)
 		return
 	}
 
 	for nodeName, node := range data {
-		fmt.Printf("LCOM96 for %s = %f\n", nodeName, metric.CalculateLCOM96B(node))
-		fmt.Printf("LCOM for %s = %f\n", nodeName, metric.CalculateLCOM(node))
+		fmt.Printf("LCOM96 for %s = %f\n", nodeName, analyze.CalculateLCOM96B(node))
+		fmt.Printf("LCOM for %s = %f\n", nodeName, analyze.CalculateLCOM(node))
 	}
 
 	jsonData, err := json.Marshal(data)

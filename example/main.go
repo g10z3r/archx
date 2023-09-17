@@ -1,5 +1,15 @@
 package main
 
+type Transport interface {
+	StartEngine() error
+	StopEngine() error
+
+	GoStraight() error
+	GoLeft() error
+	GoRight() error
+	GoBack() error
+}
+
 type Address struct {
 	street string
 	city   string
@@ -8,14 +18,28 @@ type Address struct {
 }
 
 type Person struct {
-	Name    string
-	Age     int
-	Address Address
+	FirstName,
+	LastName string
+	Age       int
+	Address   Address
+	Transport Transport
+	Skill     struct {
+		Intelligence float32
+		Speed        float32
+	}
 }
 
-func (p *Person) Rename(newName string) *Person {
-	if newName != p.Name {
-		p.Name = newName
+func (p *Person) ChangeFirstName(newFirstName string) *Person {
+	if newFirstName != p.FirstName {
+		p.FirstName = newFirstName
+	}
+
+	return p
+}
+
+func (p *Person) ChangeLastName(newLastName string) *Person {
+	if newLastName != p.LastName {
+		p.LastName = newLastName
 	}
 
 	return p
