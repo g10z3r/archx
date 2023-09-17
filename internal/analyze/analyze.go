@@ -43,6 +43,11 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 				fileManifest.AddStructType(currentStructName, sType)
 			}
 
+			if interfaceType, ok := t.Type.(*ast.InterfaceType); ok {
+				iType := types.NewInterfaceType(interfaceType)
+				fileManifest.AddInterfaceType(t.Name.String(), iType)
+			}
+
 		case *ast.FuncDecl:
 			if t.Recv == nil || len(t.Recv.List) == 0 {
 				return true
@@ -66,7 +71,6 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 			}
 
 			// Collect information about the fields used within this method
-
 			methodFields, exists := methodsInfo[methodName]
 			if !exists {
 				methodFields = map[string]struct{}{}

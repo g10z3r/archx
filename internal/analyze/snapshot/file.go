@@ -8,8 +8,9 @@ import (
 )
 
 type FileManifest struct {
-	StructTypeMap   map[string]*types.StructType
-	BelongToPackage string
+	StructTypeMap    map[string]*types.StructType
+	InterfaceTypeMap map[string]*types.InterfaceType
+	BelongToPackage  string
 }
 
 func (fm *FileManifest) AddStructType(structName string, structType *types.StructType) {
@@ -17,6 +18,14 @@ func (fm *FileManifest) AddStructType(structName string, structType *types.Struc
 		fm.StructTypeMap = make(map[string]*types.StructType)
 	}
 	fm.StructTypeMap[structName] = structType
+}
+
+func (fm *FileManifest) AddInterfaceType(interfaceName string, it *types.InterfaceType) {
+	if fm.InterfaceTypeMap == nil {
+		fm.InterfaceTypeMap = make(map[string]*types.InterfaceType)
+	}
+
+	fm.InterfaceTypeMap[interfaceName] = it
 }
 
 func (fm *FileManifest) HasStructType(structName string) bool {
@@ -69,7 +78,8 @@ func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName stri
 
 func NewFileManifest(bToPkg string) *FileManifest {
 	return &FileManifest{
-		StructTypeMap:   make(map[string]*types.StructType),
-		BelongToPackage: bToPkg,
+		StructTypeMap:    make(map[string]*types.StructType),
+		InterfaceTypeMap: make(map[string]*types.InterfaceType),
+		BelongToPackage:  bToPkg,
 	}
 }

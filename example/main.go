@@ -1,13 +1,17 @@
 package main
 
+type Go interface {
+	Straight() error
+	Left() error
+	Right() error
+	Back() error
+}
+
 type Transport interface {
 	StartEngine() error
 	StopEngine() error
 
-	GoStraight() error
-	GoLeft() error
-	GoRight() error
-	GoBack() error
+	Go
 }
 
 type Address struct {

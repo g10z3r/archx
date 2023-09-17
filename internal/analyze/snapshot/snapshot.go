@@ -1,9 +1,5 @@
 package snapshot
 
-import (
-	"github.com/g10z3r/archx/internal/analyze/types"
-)
-
 type SnapshotManifest struct {
 	Package map[string]*PackageManifest
 }
@@ -15,14 +11,16 @@ func (sm *SnapshotManifest) UpdateFromFileManifest(fm *FileManifest) error {
 
 	packageManifest, exists := sm.Package[fm.BelongToPackage]
 	if !exists {
-		packageManifest = &PackageManifest{
-			StructTypeMap: make(map[string]*types.StructType),
-		}
+		packageManifest = NewPackageManifest()
 		sm.Package[fm.BelongToPackage] = packageManifest
 	}
 
 	for k, v := range fm.StructTypeMap {
 		packageManifest.StructTypeMap[k] = v
+	}
+
+	for k, v := range fm.InterfaceTypeMap {
+		packageManifest.InterfaceTypeMap[k] = v
 	}
 
 	return nil
