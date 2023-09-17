@@ -8,8 +8,8 @@ import (
 	"github.com/g10z3r/archx/internal/analyze/types"
 )
 
-func ParseGoFile(filePath string) (types.NodeType, error) {
-	_, node, err := parseFile(filePath)
+func MustParseGoFile(filePath string) (types.NodeType, error) {
+	fset, node, err := parseFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -22,7 +22,12 @@ func ParseGoFile(filePath string) (types.NodeType, error) {
 		case *ast.TypeSpec:
 			if structType, ok := t.Type.(*ast.StructType); ok {
 				currentStructName = t.Name.String()
-				nodeData[currentStructName] = types.MakeStructType(structType)
+				sType, err := types.MakeStructType(fset, structType, types.NotEmbedded)
+				if err != nil {
+					panic(err)
+				}
+
+				nodeData[currentStructName] = sType
 			}
 
 		case *ast.FuncDecl:
@@ -55,6 +60,7 @@ func ParseGoFile(filePath string) (types.NodeType, error) {
 						usedFields[ident.Name] = true
 					}
 				}
+
 				return true
 			})
 
