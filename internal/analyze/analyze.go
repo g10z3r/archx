@@ -28,7 +28,6 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 	}
 
 	var currentStructName string
-	// Using map to collect methods information efficiently without multiple AST Inspect calls
 	methodsInfo := make(map[string]map[string]struct{})
 
 	ast.Inspect(node, func(n ast.Node) bool {
@@ -67,12 +66,12 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 			}
 
 			// Collect information about the fields used within this method
+
 			methodFields, exists := methodsInfo[methodName]
 			if !exists {
 				methodFields = map[string]struct{}{}
 				methodsInfo[methodName] = methodFields
 			}
-
 			ast.Inspect(t, func(n ast.Node) bool {
 				if ident, ok := n.(*ast.Ident); ok {
 					if exists, _ := fileManifest.IsFieldPresent(currentStructName, ident.Name); exists {
@@ -90,7 +89,7 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 	for methodName, fields := range methodsInfo {
 		for fieldName := range fields {
 			if err := fileManifest.AddMethodToStruct(currentStructName, methodName, fieldName); err != nil {
-				return nil, err // Handle error properly instead of returning false
+				return nil, err
 			}
 		}
 	}
