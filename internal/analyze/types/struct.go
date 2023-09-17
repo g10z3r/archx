@@ -28,7 +28,7 @@ type StructType struct {
 	IsEmbedded bool
 }
 
-func MakeStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructType, error) {
+func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructType, error) {
 	fMap, err := extractFieldMap(fset, res.Fields.List)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (map[string]*F
 		case *ast.StructType:
 			// Rename here coz otherwise will be just a JSON string of embedded structure
 			fieldTypeString = CustomTypeStruct
-			embedded, err = MakeStructType(fset, fieldType, Embedded)
+			embedded, err = NewStructType(fset, fieldType, Embedded)
 			if err != nil {
 				return nil, err
 			}
@@ -102,12 +102,4 @@ type FieldType struct {
 	Type     string
 	Embedded *StructType
 	IsPublic bool
-}
-
-func MakeFieldType(res *ast.Ident) *FieldType {
-	return &FieldType{
-		pos:      res.Pos(),
-		end:      res.End(),
-		IsPublic: res.IsExported(),
-	}
 }
