@@ -21,10 +21,12 @@ func main() {
 		return
 	}
 
-	// for nodeName, node := range data {
-	// 	fmt.Printf("LCOM96 for %s = %f\n", nodeName, analyze.CalculateLCOM96B(node))
-	// 	fmt.Printf("LCOM for %s = %f\n", nodeName, analyze.CalculateLCOM(node))
-	// }
+	for _, p := range snapshot.Package {
+		for sn, s := range p.StructTypeMap {
+			fmt.Printf("LCOM96 for %s = %f\n", sn, analyze.CalculateLCOM96B(s))
+			fmt.Printf("LCOM for %s = %f\n", sn, analyze.CalculateLCOM(s))
+		}
+	}
 
 	jsonData, err := json.Marshal(snapshot)
 	if err != nil {
