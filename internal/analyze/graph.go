@@ -15,7 +15,7 @@ type GraphNode struct {
 func BuildDependencyGraph(manifests map[string]*snapshot.PackageManifest) *DependencyGraph {
 	graph := &DependencyGraph{Nodes: make(map[string]*GraphNode)}
 
-	// Шаг 1: Создайте узлы для каждой структуры в каждом пакете
+	// Creating nodes for each structure in each package
 	for pkgName, pkgManifest := range manifests {
 		for structName, _ := range pkgManifest.StructTypeMap {
 			nodeName := pkgName + "." + structName
@@ -23,7 +23,7 @@ func BuildDependencyGraph(manifests map[string]*snapshot.PackageManifest) *Depen
 		}
 	}
 
-	// Шаг 2: Создайте зависимости между узлами
+	// Creating dependencies between nodes
 	for pkgName, pkgManifest := range manifests {
 		for structName, structType := range pkgManifest.StructTypeMap {
 			nodeName := pkgName + "." + structName
@@ -34,7 +34,7 @@ func BuildDependencyGraph(manifests map[string]*snapshot.PackageManifest) *Depen
 					depNodeName := depPkg + "." + depType
 					depNode, exists := graph.Nodes[depNodeName]
 
-					// Создайте узел для внешней зависимости, если он еще не существует
+					// Create a node for the external dependency if it doesn't already exist
 					if !exists {
 						depNode = &GraphNode{Name: depNodeName}
 						graph.Nodes[depNodeName] = depNode
@@ -46,7 +46,7 @@ func BuildDependencyGraph(manifests map[string]*snapshot.PackageManifest) *Depen
 		}
 	}
 
-	// Шаг 3: Создайте обратные ссылки для афферентной связанности
+	// Create backlinks for afferent connectivity
 	for _, node := range graph.Nodes {
 		for _, dep := range node.Dependencies {
 			dep.ReferencedBy = append(dep.ReferencedBy, node)
