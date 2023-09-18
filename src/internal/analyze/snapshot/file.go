@@ -3,6 +3,7 @@ package snapshot
 import (
 	"errors"
 	"fmt"
+	"path"
 
 	"github.com/g10z3r/archx/internal/analyze/types"
 )
@@ -10,13 +11,23 @@ import (
 type FileManifest struct {
 	StructTypeMap    map[string]*types.StructType
 	InterfaceTypeMap map[string]*types.InterfaceType
+	Imports          map[string]string
 	BelongToPackage  string
+}
+
+func (fm *FileManifest) AddImport(fullPath string) {
+	if fm.Imports == nil {
+		fm.Imports = make(map[string]string)
+	}
+
+	fm.Imports[path.Base(fullPath)] = fullPath
 }
 
 func (fm *FileManifest) AddStructType(structName string, structType *types.StructType) {
 	if fm.StructTypeMap == nil {
 		fm.StructTypeMap = make(map[string]*types.StructType)
 	}
+
 	fm.StructTypeMap[structName] = structType
 }
 
@@ -46,11 +57,11 @@ func (fm *FileManifest) IsFieldPresent(structName, fieldName string) (bool, erro
 		return false, fmt.Errorf("structure %s does not exist", structName)
 	}
 
-	if structType.Field == nil {
+	if structType.Fields == nil {
 		return false, errors.New("field map is not initialized for the structure")
 	}
 
-	_, exists = structType.Field[fieldName]
+	_, exists = structType.Fields[fieldName]
 	return exists, nil
 }
 
@@ -64,15 +75,15 @@ func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName stri
 		return fmt.Errorf("structure %s does not exist", structName)
 	}
 
-	if structType.Method == nil {
-		structType.Method = make(map[string]map[string]struct{})
+	if structType.Methods == nil {
+		structType.Methods = make(map[string]map[string]struct{})
 	}
 
-	if structType.Method[methodName] == nil {
-		structType.Method[methodName] = make(map[string]struct{})
+	if structType.Methods[methodName] == nil {
+		structType.Methods[methodName] = make(map[string]struct{})
 	}
 
-	structType.Method[methodName][fieldName] = struct{}{}
+	structType.Methods[methodName][fieldName] = struct{}{}
 	return nil
 }
 
@@ -80,6 +91,7 @@ func NewFileManifest(bToPkg string) *FileManifest {
 	return &FileManifest{
 		StructTypeMap:    make(map[string]*types.StructType),
 		InterfaceTypeMap: make(map[string]*types.InterfaceType),
+		Imports:          make(map[string]string),
 		BelongToPackage:  bToPkg,
 	}
 }

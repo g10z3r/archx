@@ -18,11 +18,16 @@ const (
 )
 
 type StructType struct {
-	_          [0]int
-	pos        token.Pos
-	end        token.Pos
-	Field      map[string]*FieldType
-	Method     map[string]map[string]struct{}
+	_   [0]int
+	pos token.Pos
+	end token.Pos
+	// Fields holds a mapping between field names and their respective metadata
+	Fields map[string]*FieldType
+	// Methods maps method names to the fields that are utilized within them
+	Methods map[string]map[string]struct{}
+	// Dependencies maps package paths to the names of the types they contain
+	Dependencies map[string][]string
+	// Flag indicating whether the struct is embedded
 	IsEmbedded bool
 }
 
@@ -40,8 +45,8 @@ func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*
 	return &StructType{
 		pos:        res.Pos(),
 		end:        res.End(),
-		Field:      fMap,
-		Method:     method,
+		Fields:     fMap,
+		Methods:    method,
 		IsEmbedded: isEmbedded,
 	}, nil
 }

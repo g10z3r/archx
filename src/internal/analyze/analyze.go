@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/g10z3r/archx/internal/analyze/snapshot"
 	"github.com/g10z3r/archx/internal/analyze/types"
@@ -32,6 +33,13 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch t := n.(type) {
+		case *ast.ImportSpec:
+			if t.Path != nil && t.Path.Value != "" {
+				// Remove quotes around the imported string
+				importPath := t.Path.Value[1 : len(t.Path.Value)-1]
+				fileManifest.AddImport(importPath)
+			}
+
 		case *ast.TypeSpec:
 			if structType, ok := t.Type.(*ast.StructType); ok {
 				currentStructName = t.Name.String()
@@ -47,6 +55,19 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 				iType := types.NewInterfaceType(interfaceType)
 				fileManifest.AddInterfaceType(t.Name.String(), iType)
 			}
+
+		case *ast.SelectorExpr:
+			if xIdent, ok := t.X.(*ast.Ident); ok {
+				// fmt.Println(t.Sel.Name)
+				if _, exists := fileManifest.Imports[xIdent.Name]; exists {
+					fmt.Printf("%s является именем пакета\n", xIdent.Name)
+				} else {
+					fmt.Printf("%s может быть переменной\n", xIdent.Name)
+				}
+			}
+
+		// case *ast.CallExpr:
+		// 	handleCallExpr(t)
 
 		case *ast.FuncDecl:
 			if t.Recv == nil || len(t.Recv.List) == 0 {
@@ -101,6 +122,18 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 	return fileManifest, nil
 }
 
+func isPackageName(pkgName string, imports []string) bool {
+	for _, importPkg := range imports {
+		// Сравниваем с последним элементом импортной строки, так как пользователи могут использовать псевдонимы
+		// например: import mypkg "github.com/user/mypkg"
+		parts := strings.Split(importPkg, "/")
+		if pkgName == parts[len(parts)-1] {
+			return true
+		}
+	}
+	return false
+}
+
 func parseFile(filePath string) (*token.FileSet, *ast.File, error) {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
@@ -119,4 +152,17 @@ func parsePackage(filePath string) (string, error) {
 	}
 
 	return file.Name.Name, nil
+}
+
+func handleCallExpr(expr *ast.CallExpr) {
+	fun := expr.Fun
+	switch fn := fun.(type) {
+	case *ast.Ident:
+		fmt.Printf("Function called: %s\n", fn.Name)
+	case *ast.SelectorExpr:
+		xIdent, ok := fn.X.(*ast.Ident)
+		if ok {
+			fmt.Printf("Function called: %s.%s\n", xIdent.Name, fn.Sel.Name)
+		}
+	}
 }

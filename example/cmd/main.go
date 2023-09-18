@@ -1,5 +1,7 @@
 package main
 
+import "github.com/g10z3r/archx/example/internal/data"
+
 type Go interface {
 	Straight() error
 	Left() error
@@ -25,6 +27,7 @@ type Person struct {
 	FirstName,
 	LastName string
 	Age       int
+	Info      data.PersonalInfo
 	Address   Address
 	Transport Transport
 	Skill     struct {
@@ -34,6 +37,9 @@ type Person struct {
 }
 
 func (p *Person) ChangeFirstName(newFirstName string) *Person {
+	pi := data.PersonalInfo{}
+	pi.TestMethod()
+
 	if newFirstName != p.FirstName {
 		p.FirstName = newFirstName
 	}

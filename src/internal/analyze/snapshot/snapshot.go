@@ -1,18 +1,18 @@
 package snapshot
 
 type SnapshotManifest struct {
-	Package map[string]*PackageManifest
+	PackageMap map[string]*PackageManifest
 }
 
 func (sm *SnapshotManifest) UpdateFromFileManifest(fm *FileManifest) error {
-	if sm.Package == nil {
-		sm.Package = make(map[string]*PackageManifest)
+	if sm.PackageMap == nil {
+		sm.PackageMap = make(map[string]*PackageManifest)
 	}
 
-	packageManifest, exists := sm.Package[fm.BelongToPackage]
+	packageManifest, exists := sm.PackageMap[fm.BelongToPackage]
 	if !exists {
 		packageManifest = NewPackageManifest()
-		sm.Package[fm.BelongToPackage] = packageManifest
+		sm.PackageMap[fm.BelongToPackage] = packageManifest
 	}
 
 	for k, v := range fm.StructTypeMap {
@@ -28,6 +28,6 @@ func (sm *SnapshotManifest) UpdateFromFileManifest(fm *FileManifest) error {
 
 func NewSnapshot() *SnapshotManifest {
 	return &SnapshotManifest{
-		Package: make(map[string]*PackageManifest),
+		PackageMap: make(map[string]*PackageManifest),
 	}
 }

@@ -16,15 +16,15 @@ func CalculateAbstractness(abstractEntities int, specificEntities int) float32 {
 }
 
 func CalculateLCOM(s *types.StructType) float32 {
-	if s == nil || len(s.Method) == 0 || len(s.Field) == 0 {
+	if s == nil || len(s.Methods) == 0 || len(s.Fields) == 0 {
 		return defaultLCOMValue
 	}
 
 	P := 0
 	Q := 0
 
-	for fieldName := range s.Field {
-		for _, fieldSet := range s.Method {
+	for fieldName := range s.Fields {
+		for _, fieldSet := range s.Methods {
 			// Check if the current method uses the current field
 			if _, exists := fieldSet[fieldName]; exists {
 				Q++
@@ -42,17 +42,17 @@ func CalculateLCOM(s *types.StructType) float32 {
 }
 
 func CalculateLCOM96B(s *types.StructType) float32 {
-	if s == nil || len(s.Method) == 0 || len(s.Field) == 0 {
+	if s == nil || len(s.Methods) == 0 || len(s.Fields) == 0 {
 		return defaultLCOMValue
 	}
 
 	// Total number of attributes in the class
-	M := float32(len(s.Field))
+	M := float32(len(s.Fields))
 	// Number of methods in the class
-	n := float32(len(s.Method))
+	n := float32(len(s.Methods))
 
 	var sum float32 = 0.0
-	for _, fields := range s.Method {
+	for _, fields := range s.Methods {
 		// The number of attributes that method i works with
 		m_i := len(fields)
 		sum += 1.0 - (float32(m_i) / float32(M))

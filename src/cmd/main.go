@@ -10,7 +10,7 @@ import (
 
 func main() {
 	snapshot := snapshot.NewSnapshot()
-	fileManifest, err := analyze.ParseGoFile("./example/main.go")
+	fileManifest, err := analyze.ParseGoFile("../example/cmd/main.go")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -21,7 +21,7 @@ func main() {
 		return
 	}
 
-	for _, p := range snapshot.Package {
+	for _, p := range snapshot.PackageMap {
 		for sn, s := range p.StructTypeMap {
 			fmt.Printf("LCOM96 for %s = %f\n", sn, analyze.CalculateLCOM96B(s))
 			fmt.Printf("LCOM for %s = %f\n", sn, analyze.CalculateLCOM(s))
