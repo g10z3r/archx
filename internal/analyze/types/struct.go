@@ -24,33 +24,46 @@ type StructType struct {
 	// Fields holds a mapping between field names and their respective metadata
 	Fields map[string]*FieldType
 	// Methods maps method names to the fields that are utilized within them
-	Methods map[string]map[string]struct{}
+	Methods map[string]map[string]FieldUsage
 	// Dependencies maps package paths to the names of the types they contain
-	Dependencies map[string][]string
+	Dependencies map[string]map[string]int
 	// Flag indicating whether the struct is embedded
 	IsEmbedded bool
+}
+
+func (st *StructType) AddDependency(importPath string, elementName string) {
+	if _, exists := st.Dependencies[importPath]; !exists {
+		st.Dependencies[importPath] = make(map[string]int)
+	}
+
+	if _, exists := st.Dependencies[importPath][elementName]; !exists {
+		st.Dependencies[importPath][elementName] = 1
+		return
+	}
+
+	st.Dependencies[importPath][elementName]++
 }
 
 func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructType, error) {
 	fMap, err := extractFieldMap(fset, res.Fields.List)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to extract field map: %w", err)
 	}
 
-	method := map[string]map[string]struct{}{}
-	if !isEmbedded {
-		method = make(map[string]map[string]struct{})
+	methods := make(map[string]map[string]FieldUsage)
+	if isEmbedded {
+		methods = nil
 	}
 
 	return &StructType{
-		pos:        res.Pos(),
-		end:        res.End(),
-		Fields:     fMap,
-		Methods:    method,
-		IsEmbedded: isEmbedded,
+		pos:          res.Pos(),
+		end:          res.End(),
+		Fields:       fMap,
+		Methods:      methods,
+		Dependencies: make(map[string]map[string]int),
+		IsEmbedded:   isEmbedded,
 	}, nil
 }
-
 func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (map[string]*FieldType, error) {
 	if len(fieldList) < 1 {
 		return nil, nil
@@ -65,6 +78,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (map[string]*F
 		}
 
 		for _, name := range field.Names {
+
 			fieldMap[name.Name] = &FieldType{
 				pos:      name.Pos(),
 				end:      name.End(),
@@ -87,6 +101,9 @@ func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (string, *StructT
 		}
 		return CustomTypeStruct, embedded, nil
 
+	case *ast.SelectorExpr:
+		return ft.Sel.Name, nil, nil
+
 	default:
 		var buf bytes.Buffer
 		if err := format.Node(&buf, fset, fieldType); err != nil {
@@ -103,4 +120,9 @@ type FieldType struct {
 	Type     string
 	Embedded *StructType
 	IsPublic bool
+}
+
+type FieldUsage struct {
+	Total int
+	Uniq  int
 }

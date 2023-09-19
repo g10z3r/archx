@@ -3,7 +3,9 @@ package snapshot
 import (
 	"errors"
 	"fmt"
+	"go/ast"
 	"path"
+	"strings"
 
 	"github.com/g10z3r/archx/internal/analyze/types"
 )
@@ -15,12 +17,20 @@ type FileManifest struct {
 	BelongToPackage  string
 }
 
-func (fm *FileManifest) AddImport(fullPath string) {
-	if fm.Imports == nil {
-		fm.Imports = make(map[string]string)
+func (fm *FileManifest) AddImport(t *ast.ImportSpec, mod string) {
+	// Remove quotes around the imported string
+	importPath := t.Path.Value[1 : len(t.Path.Value)-1]
+
+	if !strings.HasPrefix(importPath, mod) {
+		return
 	}
 
-	fm.Imports[path.Base(fullPath)] = fullPath
+	if t.Name != nil {
+		fm.Imports[t.Name.Name] = importPath
+		return
+	}
+
+	fm.Imports[path.Base(importPath)] = importPath
 }
 
 func (fm *FileManifest) AddStructType(structName string, structType *types.StructType) {
@@ -65,7 +75,7 @@ func (fm *FileManifest) IsFieldPresent(structName, fieldName string) (bool, erro
 	return exists, nil
 }
 
-func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName string) error {
+func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName string, fieldUsage types.FieldUsage) error {
 	if fm.StructTypeMap == nil {
 		return errors.New("StructTypeMap is not initialized")
 	}
@@ -76,14 +86,14 @@ func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName stri
 	}
 
 	if structType.Methods == nil {
-		structType.Methods = make(map[string]map[string]struct{})
+		structType.Methods = make(map[string]map[string]types.FieldUsage)
 	}
 
 	if structType.Methods[methodName] == nil {
-		structType.Methods[methodName] = make(map[string]struct{})
+		structType.Methods[methodName] = make(map[string]types.FieldUsage)
 	}
 
-	structType.Methods[methodName][fieldName] = struct{}{}
+	structType.Methods[methodName][fieldName] = fieldUsage
 	return nil
 }
 

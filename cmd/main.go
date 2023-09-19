@@ -10,7 +10,7 @@ import (
 
 func main() {
 	snapshot := snapshot.NewSnapshot()
-	fileManifest, err := analyze.ParseGoFile("../example/cmd/main.go")
+	fileManifest, err := analyze.ParseGoFile("./example/cmd/main.go", "github.com/g10z3r/archx")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -35,5 +35,4 @@ func main() {
 	}
 
 	fmt.Println(string(jsonData))
-
 }

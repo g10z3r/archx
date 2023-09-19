@@ -1,6 +1,11 @@
 package main
 
-import "github.com/g10z3r/archx/example/internal/data"
+import (
+	"os"
+
+	"github.com/g10z3r/archx/example/internal/data"
+	"github.com/g10z3r/archx/example/internal/metadata"
+)
 
 type Go interface {
 	Straight() error
@@ -32,7 +37,8 @@ type Person struct {
 	Transport Transport
 	Skill     struct {
 		Intelligence float32
-		Speed        float32
+
+		Speed float32
 	}
 }
 
@@ -48,6 +54,8 @@ func (p *Person) ChangeFirstName(newFirstName string) *Person {
 }
 
 func (p *Person) ChangeLastName(newLastName string) *Person {
+	os.Getenv("TEST")
+
 	if newLastName != p.LastName {
 		p.LastName = newLastName
 	}
@@ -56,6 +64,7 @@ func (p *Person) ChangeLastName(newLastName string) *Person {
 }
 
 func (p *Person) AgeInc() *Person {
+	metadata.MetadataSome()
 	p.Age = p.Age + 1
 
 	return p

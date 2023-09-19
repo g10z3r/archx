@@ -7,13 +7,12 @@ import (
 	"go/token"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/g10z3r/archx/internal/analyze/snapshot"
 	"github.com/g10z3r/archx/internal/analyze/types"
 )
 
-func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
+func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 	pkgName, err := parsePackage(filePath)
 	if err != nil {
 		return nil, err
@@ -29,15 +28,13 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 	}
 
 	var currentStructName string
-	methodsInfo := make(map[string]map[string]struct{})
+	methodsInfo := make(map[string]map[string]types.FieldUsage)
 
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch t := n.(type) {
 		case *ast.ImportSpec:
 			if t.Path != nil && t.Path.Value != "" {
-				// Remove quotes around the imported string
-				importPath := t.Path.Value[1 : len(t.Path.Value)-1]
-				fileManifest.AddImport(importPath)
+				fileManifest.AddImport(t, mod)
 			}
 
 		case *ast.TypeSpec:
@@ -58,16 +55,13 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 
 		case *ast.SelectorExpr:
 			if xIdent, ok := t.X.(*ast.Ident); ok {
-				// fmt.Println(t.Sel.Name)
 				if _, exists := fileManifest.Imports[xIdent.Name]; exists {
-					fmt.Printf("%s является именем пакета\n", xIdent.Name)
-				} else {
-					fmt.Printf("%s может быть переменной\n", xIdent.Name)
+					fileManifest.StructTypeMap[currentStructName].AddDependency(
+						fileManifest.Imports[xIdent.Name],
+						t.Sel.Name,
+					)
 				}
 			}
-
-		// case *ast.CallExpr:
-		// 	handleCallExpr(t)
 
 		case *ast.FuncDecl:
 			if t.Recv == nil || len(t.Recv.List) == 0 {
@@ -91,16 +85,33 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 				return true
 			}
 
+			// Tracks unique field accesses within a method.
+			encounteredFields := make(map[string]struct{})
+
 			// Collect information about the fields used within this method
 			methodFields, exists := methodsInfo[methodName]
 			if !exists {
-				methodFields = map[string]struct{}{}
+				methodFields = make(map[string]types.FieldUsage)
 				methodsInfo[methodName] = methodFields
 			}
+
 			ast.Inspect(t, func(n ast.Node) bool {
 				if ident, ok := n.(*ast.Ident); ok {
 					if exists, _ := fileManifest.IsFieldPresent(currentStructName, ident.Name); exists {
-						methodFields[ident.Name] = struct{}{}
+						// Increment the Total counter each time a field is encountered
+						methodFields[ident.Name] = types.FieldUsage{
+							Total: methodFields[ident.Name].Total + 1,
+							Uniq:  methodFields[ident.Name].Uniq,
+						}
+
+						// If the field is seen for the first time, increment the Uniq counter
+						if _, seen := encounteredFields[ident.Name]; !seen {
+							methodFields[ident.Name] = types.FieldUsage{
+								Total: methodFields[ident.Name].Total,
+								Uniq:  methodFields[ident.Name].Uniq + 1,
+							}
+							encounteredFields[ident.Name] = struct{}{}
+						}
 					}
 				}
 				return true
@@ -112,26 +123,14 @@ func ParseGoFile(filePath string) (*snapshot.FileManifest, error) {
 
 	// Add methods information to FileManifest outside the AST inspect to avoid repeated work
 	for methodName, fields := range methodsInfo {
-		for fieldName := range fields {
-			if err := fileManifest.AddMethodToStruct(currentStructName, methodName, fieldName); err != nil {
+		for fieldName, fieldUsage := range fields {
+			if err := fileManifest.AddMethodToStruct(currentStructName, methodName, fieldName, fieldUsage); err != nil {
 				return nil, err
 			}
 		}
 	}
 
 	return fileManifest, nil
-}
-
-func isPackageName(pkgName string, imports []string) bool {
-	for _, importPkg := range imports {
-		// Сравниваем с последним элементом импортной строки, так как пользователи могут использовать псевдонимы
-		// например: import mypkg "github.com/user/mypkg"
-		parts := strings.Split(importPkg, "/")
-		if pkgName == parts[len(parts)-1] {
-			return true
-		}
-	}
-	return false
 }
 
 func parseFile(filePath string) (*token.FileSet, *ast.File, error) {
