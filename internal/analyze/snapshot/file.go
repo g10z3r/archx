@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/token"
 	"path"
 	"strings"
 
@@ -11,7 +12,7 @@ import (
 )
 
 type FileManifest struct {
-	StructTypeMap    map[string]*entity.StructType
+	StructTypeMap    map[string]*entity.StructInfo
 	InterfaceTypeMap map[string]*entity.InterfaceType
 	Imports          map[string]string
 	BelongToPackage  string
@@ -33,9 +34,9 @@ func (fm *FileManifest) AddImport(t *ast.ImportSpec, mod string) {
 	fm.Imports[path.Base(importPath)] = importPath
 }
 
-func (fm *FileManifest) AddStructType(structName string, structType *entity.StructType) {
+func (fm *FileManifest) AddStructType(structName string, structType *entity.StructInfo) {
 	if fm.StructTypeMap == nil {
-		fm.StructTypeMap = make(map[string]*entity.StructType)
+		fm.StructTypeMap = make(map[string]*entity.StructInfo)
 	}
 
 	fm.StructTypeMap[structName] = structType
@@ -59,7 +60,7 @@ func (fm *FileManifest) HasStructType(structName string) bool {
 
 func (fm *FileManifest) IsFieldPresent(structName, fieldName string) (bool, error) {
 	if fm.StructTypeMap == nil {
-		return false, errors.New("StructTypeMap is not initialized")
+		return false, errors.New("structTypeMap is not initialized")
 	}
 
 	structType, exists := fm.StructTypeMap[structName]
@@ -67,39 +68,51 @@ func (fm *FileManifest) IsFieldPresent(structName, fieldName string) (bool, erro
 		return false, fmt.Errorf("structure %s does not exist", structName)
 	}
 
-	if structType.Fields == nil {
-		return false, errors.New("field map is not initialized for the structure")
+	if structType.FieldsIndex == nil {
+		return false, errors.New("field index is not initialized for the structure")
 	}
 
-	_, exists = structType.Fields[fieldName]
+	_, exists = structType.FieldsIndex[fieldName]
 	return exists, nil
 }
 
-func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName string, fieldUsage entity.FieldUsage) error {
+func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName string, fieldUsage entity.Usage) error {
 	if fm.StructTypeMap == nil {
-		return errors.New("StructTypeMap is not initialized")
+		return errors.New("structTypeMap is not initialized")
 	}
 
-	structType, exists := fm.StructTypeMap[structName]
+	structInfo, exists := fm.StructTypeMap[structName]
 	if !exists {
 		return fmt.Errorf("structure %s does not exist", structName)
 	}
 
-	if structType.Methods == nil {
-		structType.Methods = make(map[string]map[string]entity.FieldUsage)
+	methodIndex, exists := structInfo.MethodsIndex[methodName]
+	var methodInfo *entity.MethodInfo
+	if exists {
+		// Если метод существует, получаем его информацию
+		methodInfo = structInfo.Methods[methodIndex]
+	} else {
+		// Если метода нет, создаем новую информацию о методе
+		methodInfo = &entity.MethodInfo{
+			Pos:      token.NoPos, // TODO: Set correct position
+			End:      token.NoPos, // TODO: Set correct end
+			Usages:   make(map[string]entity.Usage),
+			IsPublic: false, // TODO: Set correct visibility
+		}
+		// Добавляем новую информацию о методе в слайс и индекс
+		structInfo.Methods = append(structInfo.Methods, methodInfo)
+		structInfo.MethodsIndex[methodName] = len(structInfo.Methods) - 1
 	}
 
-	if structType.Methods[methodName] == nil {
-		structType.Methods[methodName] = make(map[string]entity.FieldUsage)
-	}
+	// Обновляем информацию об использовании поля для этого метода
+	methodInfo.Usages[fieldName] = fieldUsage
 
-	structType.Methods[methodName][fieldName] = fieldUsage
 	return nil
 }
 
 func NewFileManifest(bToPkg string) *FileManifest {
 	return &FileManifest{
-		StructTypeMap:    make(map[string]*entity.StructType),
+		StructTypeMap:    make(map[string]*entity.StructInfo),
 		InterfaceTypeMap: make(map[string]*entity.InterfaceType),
 		Imports:          make(map[string]string),
 		BelongToPackage:  bToPkg,

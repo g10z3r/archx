@@ -11,87 +11,117 @@ import (
 const (
 	Embedded    = true
 	NotEmbedded = false
+
+	CustomTypeStruct = "struct"
 )
-const CustomTypeStruct = "struct"
 
-type StructType struct {
-	_   [0]int
-	pos token.Pos
-	end token.Pos
-	// Fields holds a mapping between field names and their respective metadata
-	Fields map[string]*FieldType
-	// Methods maps method names to the fields that are utilized within them
-	Methods map[string]map[string]FieldUsage
-	// Dependencies maps package paths to the names of the types they contain
-	Dependencies map[string]map[string]int
-	// Flag indicating whether the struct is embedded
-	IsEmbedded bool
-}
-
-type FieldType struct {
+type FieldInfo struct {
 	_        [0]int
 	pos      token.Pos
 	end      token.Pos
 	Type     string
-	Embedded *StructType
+	Embedded *StructInfo
 	IsPublic bool
 }
 
-type FieldUsage struct {
+type Usage struct {
 	Total int
 	Uniq  int
 }
 
-func (st *StructType) AddDependency(importPath, elementName string) {
-	if st.Dependencies[importPath] == nil {
-		st.Dependencies[importPath] = make(map[string]int)
-	}
-
-	st.Dependencies[importPath][elementName]++
+type MethodInfo struct {
+	Pos      token.Pos
+	End      token.Pos
+	Usages   map[string]Usage
+	IsPublic bool
 }
 
-func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructType, error) {
-	fieldMap, err := extractFieldMap(fset, res.Fields.List)
+type DependencyInfo struct {
+	ElementName string
+	Usage       Usage
+}
+
+type StructInfo struct {
+	_   [0]int
+	pos token.Pos
+	end token.Pos
+
+	Fields      []*FieldInfo
+	FieldsIndex map[string]int
+
+	Methods      []*MethodInfo
+	MethodsIndex map[string]int
+
+	Dependencies      []*DependencyInfo
+	DependenciesIndex map[string]int
+
+	IsEmbedded bool
+}
+
+func (st *StructInfo) AddDependency(importPath, elementName string) {
+	index, exists := st.DependenciesIndex[importPath]
+	if !exists {
+		dependencyInfo := &DependencyInfo{
+			ElementName: elementName,
+			Usage:       Usage{Total: 1, Uniq: 1},
+		}
+		st.Dependencies = append(st.Dependencies, dependencyInfo)
+		st.DependenciesIndex[importPath] = len(st.Dependencies) - 1
+	} else {
+		st.Dependencies[index].Usage.Total++
+		if st.Dependencies[index].ElementName != elementName {
+			st.Dependencies[index].Usage.Uniq++
+			st.Dependencies[index].ElementName = elementName
+		}
+	}
+}
+
+func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructInfo, error) {
+	fields, fieldsIndex, err := extractFieldMap(fset, res.Fields.List)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract field map: %w", err)
 	}
 
-	methods := map[string]map[string]FieldUsage{}
-	if isEmbedded {
-		methods = nil
-	}
+	methods := []*MethodInfo{}
+	methodsIndex := make(map[string]int)
 
-	return &StructType{
-		pos:          res.Pos(),
-		end:          res.End(),
-		Fields:       fieldMap,
-		Methods:      methods,
-		Dependencies: map[string]map[string]int{},
-		IsEmbedded:   isEmbedded,
+	return &StructInfo{
+		pos:               res.Pos(),
+		end:               res.End(),
+		Fields:            fields,
+		FieldsIndex:       fieldsIndex,
+		Methods:           methods,
+		MethodsIndex:      methodsIndex,
+		Dependencies:      []*DependencyInfo{},
+		DependenciesIndex: make(map[string]int),
+		IsEmbedded:        isEmbedded,
 	}, nil
 }
 
-func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (map[string]*FieldType, error) {
-	fieldMap := make(map[string]*FieldType, len(fieldList))
-	for _, field := range fieldList {
+func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) ([]*FieldInfo, map[string]int, error) {
+	fields := make([]*FieldInfo, 0, len(fieldList))
+	fieldsIndex := make(map[string]int, len(fieldList))
+
+	for i, field := range fieldList {
 		fieldTypeString, embedded, err := extractFieldType(fset, field.Type)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, name := range field.Names {
-			fieldMap[name.Name] = &FieldType{
+			fieldsIndex[name.Name] = i
+			fields = append(fields, &FieldInfo{
 				pos:      name.Pos(),
 				end:      name.End(),
 				Type:     fieldTypeString,
 				Embedded: embedded,
 				IsPublic: name.IsExported(),
-			}
+			})
 		}
 	}
-	return fieldMap, nil
+	return fields, fieldsIndex, nil
 }
 
-func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (string, *StructType, error) {
+func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (string, *StructInfo, error) {
 	switch ft := fieldType.(type) {
 	case *ast.StructType:
 		embedded, err := NewStructType(fset, ft, true)

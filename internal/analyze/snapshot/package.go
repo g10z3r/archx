@@ -5,7 +5,7 @@ import (
 )
 
 type PackageManifest struct {
-	StructTypeMap    map[string]*entity.StructType    `json:"NodeMap"`
+	StructTypeMap    map[string]*entity.StructInfo    `json:"NodeMap"`
 	InterfaceTypeMap map[string]*entity.InterfaceType `json:"AbstractMap"`
 }
 
@@ -19,7 +19,7 @@ func (pm *PackageManifest) CountStructs() int {
 
 func NewPackageManifest() *PackageManifest {
 	return &PackageManifest{
-		StructTypeMap:    make(map[string]*entity.StructType),
+		StructTypeMap:    make(map[string]*entity.StructInfo),
 		InterfaceTypeMap: make(map[string]*entity.InterfaceType),
 	}
 }

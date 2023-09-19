@@ -30,7 +30,7 @@ func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 	}
 
 	var currentStructName string
-	methodsInfo := make(map[string]map[string]entity.FieldUsage)
+	methodsInfo := make(map[string]map[string]entity.Usage)
 
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch t := n.(type) {
@@ -93,7 +93,7 @@ func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 			// Collect information about the fields used within this method
 			methodFields, exists := methodsInfo[methodName]
 			if !exists {
-				methodFields = make(map[string]entity.FieldUsage)
+				methodFields = make(map[string]entity.Usage)
 				methodsInfo[methodName] = methodFields
 			}
 

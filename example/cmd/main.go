@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/g10z3r/archx/example/internal/data"
-	"github.com/g10z3r/archx/example/internal/metadata"
+	mt "github.com/g10z3r/archx/example/internal/metadata"
 )
 
 type Go interface {
@@ -64,7 +64,7 @@ func (p *Person) ChangeLastName(newLastName string) *Person {
 }
 
 func (p *Person) AgeInc() *Person {
-	metadata.MetadataSome()
+	mt.MetadataSome()
 	p.Age = p.Age + 1
 
 	return p
