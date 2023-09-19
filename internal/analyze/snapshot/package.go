@@ -1,12 +1,12 @@
 package snapshot
 
 import (
-	"github.com/g10z3r/archx/internal/analyze/types"
+	"github.com/g10z3r/archx/internal/analyze/entity"
 )
 
 type PackageManifest struct {
-	StructTypeMap    map[string]*types.StructType    `json:"NodeMap"`
-	InterfaceTypeMap map[string]*types.InterfaceType `json:"AbstractMap"`
+	StructTypeMap    map[string]*entity.StructType    `json:"NodeMap"`
+	InterfaceTypeMap map[string]*entity.InterfaceType `json:"AbstractMap"`
 }
 
 func (pm *PackageManifest) CountInterfaces() int {
@@ -19,7 +19,7 @@ func (pm *PackageManifest) CountStructs() int {
 
 func NewPackageManifest() *PackageManifest {
 	return &PackageManifest{
-		StructTypeMap:    make(map[string]*types.StructType),
-		InterfaceTypeMap: make(map[string]*types.InterfaceType),
+		StructTypeMap:    make(map[string]*entity.StructType),
+		InterfaceTypeMap: make(map[string]*entity.InterfaceType),
 	}
 }

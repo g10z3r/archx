@@ -7,12 +7,12 @@ import (
 	"path"
 	"strings"
 
-	"github.com/g10z3r/archx/internal/analyze/types"
+	"github.com/g10z3r/archx/internal/analyze/entity"
 )
 
 type FileManifest struct {
-	StructTypeMap    map[string]*types.StructType
-	InterfaceTypeMap map[string]*types.InterfaceType
+	StructTypeMap    map[string]*entity.StructType
+	InterfaceTypeMap map[string]*entity.InterfaceType
 	Imports          map[string]string
 	BelongToPackage  string
 }
@@ -33,17 +33,17 @@ func (fm *FileManifest) AddImport(t *ast.ImportSpec, mod string) {
 	fm.Imports[path.Base(importPath)] = importPath
 }
 
-func (fm *FileManifest) AddStructType(structName string, structType *types.StructType) {
+func (fm *FileManifest) AddStructType(structName string, structType *entity.StructType) {
 	if fm.StructTypeMap == nil {
-		fm.StructTypeMap = make(map[string]*types.StructType)
+		fm.StructTypeMap = make(map[string]*entity.StructType)
 	}
 
 	fm.StructTypeMap[structName] = structType
 }
 
-func (fm *FileManifest) AddInterfaceType(interfaceName string, it *types.InterfaceType) {
+func (fm *FileManifest) AddInterfaceType(interfaceName string, it *entity.InterfaceType) {
 	if fm.InterfaceTypeMap == nil {
-		fm.InterfaceTypeMap = make(map[string]*types.InterfaceType)
+		fm.InterfaceTypeMap = make(map[string]*entity.InterfaceType)
 	}
 
 	fm.InterfaceTypeMap[interfaceName] = it
@@ -75,7 +75,7 @@ func (fm *FileManifest) IsFieldPresent(structName, fieldName string) (bool, erro
 	return exists, nil
 }
 
-func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName string, fieldUsage types.FieldUsage) error {
+func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName string, fieldUsage entity.FieldUsage) error {
 	if fm.StructTypeMap == nil {
 		return errors.New("StructTypeMap is not initialized")
 	}
@@ -86,11 +86,11 @@ func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName stri
 	}
 
 	if structType.Methods == nil {
-		structType.Methods = make(map[string]map[string]types.FieldUsage)
+		structType.Methods = make(map[string]map[string]entity.FieldUsage)
 	}
 
 	if structType.Methods[methodName] == nil {
-		structType.Methods[methodName] = make(map[string]types.FieldUsage)
+		structType.Methods[methodName] = make(map[string]entity.FieldUsage)
 	}
 
 	structType.Methods[methodName][fieldName] = fieldUsage
@@ -99,8 +99,8 @@ func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName stri
 
 func NewFileManifest(bToPkg string) *FileManifest {
 	return &FileManifest{
-		StructTypeMap:    make(map[string]*types.StructType),
-		InterfaceTypeMap: make(map[string]*types.InterfaceType),
+		StructTypeMap:    make(map[string]*entity.StructType),
+		InterfaceTypeMap: make(map[string]*entity.InterfaceType),
 		Imports:          make(map[string]string),
 		BelongToPackage:  bToPkg,
 	}
