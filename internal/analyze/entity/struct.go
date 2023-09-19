@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/format"
 	"go/token"
+	"strings"
 )
 
 const (
@@ -37,8 +38,76 @@ type MethodInfo struct {
 }
 
 type DependencyInfo struct {
-	ElementName string
-	Usage       Usage
+	Element string
+	Usage   Usage
+}
+
+type DependencyNode struct {
+	Prefix   string
+	Children map[string]*DependencyNode
+	Index    int
+}
+
+type DepsRadixTree struct {
+	Root     *DependencyNode
+	BasePath string
+}
+
+func NewDepsRadixTree(basePath string) *DepsRadixTree {
+	tree := &DepsRadixTree{
+		Root: &DependencyNode{
+			Prefix:   basePath,
+			Children: make(map[string]*DependencyNode),
+			Index:    -1,
+		},
+		BasePath: basePath,
+	}
+	return tree
+}
+
+func (t *DepsRadixTree) Insert(path string, index int) {
+	if strings.HasPrefix(path, t.BasePath) {
+		path = strings.TrimPrefix(path, t.BasePath)
+	}
+
+	currentNode := t.Root
+	pathSegments := strings.Split(path, "/")
+
+	for _, segment := range pathSegments {
+		if segment == "" {
+			continue // Skip empty segments
+		}
+
+		if nextNode, ok := currentNode.Children[segment]; ok {
+			currentNode = nextNode
+		} else {
+			newNode := &DependencyNode{
+				Prefix:   segment,
+				Children: make(map[string]*DependencyNode),
+				Index:    index,
+			}
+			currentNode.Children[segment] = newNode
+			currentNode = newNode
+		}
+	}
+}
+func (t *DepsRadixTree) Find(path string) (bool, int) {
+	currentNode := t.Root
+	pathSegments := strings.Split(path, "/")
+
+	for _, segment := range pathSegments {
+		if segment == "" {
+			// Skip empty segments that may occur due to double slashes or slashes at the beginning/end of the line
+			continue
+		}
+
+		if nextNode, ok := currentNode.Children[segment]; ok {
+			currentNode = nextNode
+		} else {
+			return false, -1 // Index -1 means no dependency
+		}
+	}
+	return true, currentNode.Index
 }
 
 type StructInfo struct {
@@ -52,31 +121,31 @@ type StructInfo struct {
 	Methods      []*MethodInfo
 	MethodsIndex map[string]int
 
-	Dependencies      []*DependencyInfo
-	DependenciesIndex map[string]int
+	Deps     []*DependencyInfo
+	DepsTree *DepsRadixTree
 
 	IsEmbedded bool
 }
 
-func (st *StructInfo) AddDependency(importPath, elementName string) {
-	index, exists := st.DependenciesIndex[importPath]
+func (st *StructInfo) AddDependency(importPath, element string) {
+	exists, index := st.DepsTree.Find(importPath)
 	if !exists {
 		dependencyInfo := &DependencyInfo{
-			ElementName: elementName,
-			Usage:       Usage{Total: 1, Uniq: 1},
+			Element: element,
+			Usage:   Usage{Total: 1, Uniq: 1},
 		}
-		st.Dependencies = append(st.Dependencies, dependencyInfo)
-		st.DependenciesIndex[importPath] = len(st.Dependencies) - 1
+		st.Deps = append(st.Deps, dependencyInfo)
+		st.DepsTree.Insert(importPath, len(st.Deps)-1)
 	} else {
-		st.Dependencies[index].Usage.Total++
-		if st.Dependencies[index].ElementName != elementName {
-			st.Dependencies[index].Usage.Uniq++
-			st.Dependencies[index].ElementName = elementName
+		st.Deps[index].Usage.Total++
+		if st.Deps[index].Element != element {
+			st.Deps[index].Usage.Uniq++
+			st.Deps[index].Element = element
 		}
 	}
 }
 
-func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructInfo, error) {
+func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool, modBasePath string, createDepTree bool) (*StructInfo, error) {
 	fields, fieldsIndex, err := extractFieldMap(fset, res.Fields.List)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract field map: %w", err)
@@ -86,15 +155,15 @@ func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*
 	methodsIndex := make(map[string]int)
 
 	return &StructInfo{
-		pos:               res.Pos(),
-		end:               res.End(),
-		Fields:            fields,
-		FieldsIndex:       fieldsIndex,
-		Methods:           methods,
-		MethodsIndex:      methodsIndex,
-		Dependencies:      []*DependencyInfo{},
-		DependenciesIndex: make(map[string]int),
-		IsEmbedded:        isEmbedded,
+		pos:          res.Pos(),
+		end:          res.End(),
+		Fields:       fields,
+		FieldsIndex:  fieldsIndex,
+		Methods:      methods,
+		MethodsIndex: methodsIndex,
+		Deps:         []*DependencyInfo{},
+		DepsTree:     NewDepsRadixTree(modBasePath),
+		IsEmbedded:   isEmbedded,
 	}, nil
 }
 
@@ -124,7 +193,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) ([]*FieldInfo,
 func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (string, *StructInfo, error) {
 	switch ft := fieldType.(type) {
 	case *ast.StructType:
-		embedded, err := NewStructType(fset, ft, true)
+		embedded, err := NewStructType(fset, ft, true, "", false)
 		if err != nil {
 			return "", nil, err
 		}

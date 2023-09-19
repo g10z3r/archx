@@ -42,7 +42,7 @@ func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 		case *ast.TypeSpec:
 			if structType, ok := t.Type.(*ast.StructType); ok {
 				currentStructName = t.Name.Name
-				sType, err := entity.NewStructType(fset, structType, entity.NotEmbedded)
+				sType, err := entity.NewStructType(fset, structType, entity.NotEmbedded, mod, true)
 				if err != nil {
 					return false
 				}
