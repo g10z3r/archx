@@ -13,6 +13,7 @@ import (
 )
 
 func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
+	// Parse the package name
 	pkgName, err := parsePackage(filePath)
 	if err != nil {
 		return nil, err
@@ -22,6 +23,7 @@ func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 	pkgPath := path.Join(pkgDir, pkgName)
 	fileManifest := snapshot.NewFileManifest(pkgPath)
 
+	// Parse the file to get the AST
 	fset, node, err := parseFile(filePath)
 	if err != nil {
 		return nil, err
@@ -39,7 +41,7 @@ func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 
 		case *ast.TypeSpec:
 			if structType, ok := t.Type.(*ast.StructType); ok {
-				currentStructName = t.Name.String()
+				currentStructName = t.Name.Name
 				sType, err := types.NewStructType(fset, structType, types.NotEmbedded)
 				if err != nil {
 					return false
@@ -98,20 +100,17 @@ func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 			ast.Inspect(t, func(n ast.Node) bool {
 				if ident, ok := n.(*ast.Ident); ok {
 					if exists, _ := fileManifest.IsFieldPresent(currentStructName, ident.Name); exists {
-						// Increment the Total counter each time a field is encountered
-						methodFields[ident.Name] = types.FieldUsage{
-							Total: methodFields[ident.Name].Total + 1,
-							Uniq:  methodFields[ident.Name].Uniq,
-						}
+						fieldUsage := methodFields[ident.Name]
 
-						// If the field is seen for the first time, increment the Uniq counter
+						fieldUsage.Total++
+
+						// If the field is encountered for the first time in this method, increment Uniq
 						if _, seen := encounteredFields[ident.Name]; !seen {
-							methodFields[ident.Name] = types.FieldUsage{
-								Total: methodFields[ident.Name].Total,
-								Uniq:  methodFields[ident.Name].Uniq + 1,
-							}
+							fieldUsage.Uniq++
 							encounteredFields[ident.Name] = struct{}{}
 						}
+
+						methodFields[ident.Name] = fieldUsage
 					}
 				}
 				return true
