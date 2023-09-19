@@ -15,17 +15,18 @@ func (sm *SnapshotManifest) UpdateFromFileManifest(fm *FileManifest) error {
 		sm.PackageMap[fm.BelongToPackage] = packageManifest
 	}
 
-	for k, v := range fm.StructTypeMap {
-		packageManifest.StructTypeMap[k] = v
+	for _, structInfo := range fm.Structs {
+		packageManifest.Structs = append(packageManifest.Structs, structInfo)
 	}
+	packageManifest.StructsIndex = fm.StructsIndex
 
-	for k, v := range fm.InterfaceTypeMap {
-		packageManifest.InterfaceTypeMap[k] = v
+	for _, interfaceInfo := range fm.Interfaces {
+		packageManifest.Interfaces = append(packageManifest.Interfaces, interfaceInfo)
 	}
+	packageManifest.InterfacesIndex = fm.InterfacesIndex
 
 	return nil
 }
-
 func NewSnapshot() *SnapshotManifest {
 	return &SnapshotManifest{
 		PackageMap: make(map[string]*PackageManifest),

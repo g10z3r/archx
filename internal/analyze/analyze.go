@@ -47,21 +47,22 @@ func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 					return false
 				}
 
-				fileManifest.AddStructType(currentStructName, sType)
+				fileManifest.AddStruct(currentStructName, sType)
 			}
 
 			if interfaceType, ok := t.Type.(*ast.InterfaceType); ok {
 				iType := entity.NewInterfaceType(interfaceType)
-				fileManifest.AddInterfaceType(t.Name.String(), iType)
+				fileManifest.AddInterface(t.Name.String(), iType)
 			}
 
 		case *ast.SelectorExpr:
 			if xIdent, ok := t.X.(*ast.Ident); ok {
 				if _, exists := fileManifest.Imports[xIdent.Name]; exists {
-					fileManifest.StructTypeMap[currentStructName].AddDependency(
-						fileManifest.Imports[xIdent.Name],
-						t.Sel.Name,
-					)
+					// Get the index of the current struct from the StructsIndex map
+					structIndex := fileManifest.StructsIndex[currentStructName]
+					// Use the index to get the reference to the current StructInfo from the Structs slice
+					currentStruct := fileManifest.Structs[structIndex]
+					currentStruct.AddDependency(fileManifest.Imports[xIdent.Name], t.Sel.Name)
 				}
 			}
 

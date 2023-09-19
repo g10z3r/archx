@@ -12,10 +12,14 @@ import (
 )
 
 type FileManifest struct {
-	StructTypeMap    map[string]*entity.StructInfo
-	InterfaceTypeMap map[string]*entity.InterfaceType
-	Imports          map[string]string
-	BelongToPackage  string
+	Structs      []*entity.StructInfo
+	StructsIndex map[string]int
+
+	Interfaces      []*entity.InterfaceType
+	InterfacesIndex map[string]int
+
+	Imports         map[string]string
+	BelongToPackage string
 }
 
 func (fm *FileManifest) AddImport(t *ast.ImportSpec, mod string) {
@@ -34,39 +38,49 @@ func (fm *FileManifest) AddImport(t *ast.ImportSpec, mod string) {
 	fm.Imports[path.Base(importPath)] = importPath
 }
 
-func (fm *FileManifest) AddStructType(structName string, structType *entity.StructInfo) {
-	if fm.StructTypeMap == nil {
-		fm.StructTypeMap = make(map[string]*entity.StructInfo)
+func (fm *FileManifest) AddStruct(structName string, structType *entity.StructInfo) {
+	if fm.Structs == nil {
+		fm.Structs = make([]*entity.StructInfo, 0)
+	}
+	if fm.StructsIndex == nil {
+		fm.StructsIndex = make(map[string]int)
 	}
 
-	fm.StructTypeMap[structName] = structType
+	fm.Structs = append(fm.Structs, structType)
+	fm.StructsIndex[structName] = len(fm.Structs) - 1
 }
 
-func (fm *FileManifest) AddInterfaceType(interfaceName string, it *entity.InterfaceType) {
-	if fm.InterfaceTypeMap == nil {
-		fm.InterfaceTypeMap = make(map[string]*entity.InterfaceType)
+func (fm *FileManifest) AddInterface(interfaceName string, it *entity.InterfaceType) {
+	if fm.Interfaces == nil {
+		fm.Interfaces = make([]*entity.InterfaceType, 0)
+	}
+	if fm.InterfacesIndex == nil {
+		fm.InterfacesIndex = make(map[string]int)
 	}
 
-	fm.InterfaceTypeMap[interfaceName] = it
+	fm.Interfaces = append(fm.Interfaces, it)
+	fm.InterfacesIndex[interfaceName] = len(fm.Interfaces) - 1
 }
 
 func (fm *FileManifest) HasStructType(structName string) bool {
-	if fm.StructTypeMap == nil {
+	if fm.StructsIndex == nil {
 		return false
 	}
-	_, exists := fm.StructTypeMap[structName]
+	_, exists := fm.StructsIndex[structName]
 	return exists
 }
 
 func (fm *FileManifest) IsFieldPresent(structName, fieldName string) (bool, error) {
-	if fm.StructTypeMap == nil {
-		return false, errors.New("structTypeMap is not initialized")
+	if fm.StructsIndex == nil {
+		return false, errors.New("structs index is not initialized")
 	}
 
-	structType, exists := fm.StructTypeMap[structName]
+	structIndex, exists := fm.StructsIndex[structName]
 	if !exists {
 		return false, fmt.Errorf("structure %s does not exist", structName)
 	}
+
+	structType := fm.Structs[structIndex]
 
 	if structType.FieldsIndex == nil {
 		return false, errors.New("field index is not initialized for the structure")
@@ -77,34 +91,35 @@ func (fm *FileManifest) IsFieldPresent(structName, fieldName string) (bool, erro
 }
 
 func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName string, fieldUsage entity.Usage) error {
-	if fm.StructTypeMap == nil {
-		return errors.New("structTypeMap is not initialized")
+	if fm.StructsIndex == nil {
+		return errors.New("structs index is not initialized")
 	}
 
-	structInfo, exists := fm.StructTypeMap[structName]
+	structIndex, exists := fm.StructsIndex[structName]
 	if !exists {
 		return fmt.Errorf("structure %s does not exist", structName)
 	}
 
-	methodIndex, exists := structInfo.MethodsIndex[methodName]
+	structInfo := fm.Structs[structIndex]
+
 	var methodInfo *entity.MethodInfo
+	methodIndex, exists := structInfo.MethodsIndex[methodName]
 	if exists {
-		// Если метод существует, получаем его информацию
 		methodInfo = structInfo.Methods[methodIndex]
 	} else {
-		// Если метода нет, создаем новую информацию о методе
 		methodInfo = &entity.MethodInfo{
 			Pos:      token.NoPos, // TODO: Set correct position
 			End:      token.NoPos, // TODO: Set correct end
 			Usages:   make(map[string]entity.Usage),
 			IsPublic: false, // TODO: Set correct visibility
 		}
-		// Добавляем новую информацию о методе в слайс и индекс
+
+		// Add new information about the method to the slice and index
 		structInfo.Methods = append(structInfo.Methods, methodInfo)
 		structInfo.MethodsIndex[methodName] = len(structInfo.Methods) - 1
 	}
 
-	// Обновляем информацию об использовании поля для этого метода
+	// Update field usage information for this method
 	methodInfo.Usages[fieldName] = fieldUsage
 
 	return nil
@@ -112,9 +127,11 @@ func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName stri
 
 func NewFileManifest(bToPkg string) *FileManifest {
 	return &FileManifest{
-		StructTypeMap:    make(map[string]*entity.StructInfo),
-		InterfaceTypeMap: make(map[string]*entity.InterfaceType),
-		Imports:          make(map[string]string),
-		BelongToPackage:  bToPkg,
+		Structs:         []*entity.StructInfo{},
+		StructsIndex:    make(map[string]int),
+		Interfaces:      []*entity.InterfaceType{},
+		InterfacesIndex: make(map[string]int),
+		Imports:         make(map[string]string),
+		BelongToPackage: bToPkg,
 	}
 }

@@ -5,21 +5,26 @@ import (
 )
 
 type PackageManifest struct {
-	StructTypeMap    map[string]*entity.StructInfo    `json:"NodeMap"`
-	InterfaceTypeMap map[string]*entity.InterfaceType `json:"AbstractMap"`
+	Structs      []*entity.StructInfo
+	StructsIndex map[string]int
+
+	Interfaces      []*entity.InterfaceType
+	InterfacesIndex map[string]int
 }
 
 func (pm *PackageManifest) CountInterfaces() int {
-	return len(pm.InterfaceTypeMap)
+	return len(pm.Interfaces)
 }
 
 func (pm *PackageManifest) CountStructs() int {
-	return len(pm.StructTypeMap)
+	return len(pm.Structs)
 }
 
 func NewPackageManifest() *PackageManifest {
 	return &PackageManifest{
-		StructTypeMap:    make(map[string]*entity.StructInfo),
-		InterfaceTypeMap: make(map[string]*entity.InterfaceType),
+		Structs:         []*entity.StructInfo{},
+		StructsIndex:    make(map[string]int),
+		Interfaces:      []*entity.InterfaceType{},
+		InterfacesIndex: make(map[string]int),
 	}
 }

@@ -22,9 +22,9 @@ func main() {
 	}
 
 	for _, p := range snapshot.PackageMap {
-		for sn, s := range p.StructTypeMap {
-			fmt.Printf("LCOM96 for %s = %f\n", sn, analyze.CalculateLCOM96B(s))
-			fmt.Printf("LCOM for %s = %f\n", sn, analyze.CalculateLCOM(s))
+		for sn, si := range p.StructsIndex {
+			fmt.Printf("LCOM96 for %s = %f\n", sn, analyze.CalculateLCOM96B(p.Structs[si]))
+			fmt.Printf("LCOM for %s = %f\n", sn, analyze.CalculateLCOM(p.Structs[si]))
 		}
 	}
 
