@@ -5,12 +5,101 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"log"
 	"path"
 	"path/filepath"
 
 	"github.com/g10z3r/archx/internal/analyze/entity"
 	"github.com/g10z3r/archx/internal/analyze/snapshot"
 )
+
+func ParsePackage(dirPath string, mod string) (*PackageBuffer, error) {
+	var buf *PackageBuffer
+
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, dirPath, nil, parser.AllErrors)
+	if err != nil {
+		return nil, err
+	}
+
+	for pkgName, pkg := range pkgs {
+		buf = NewPackageBuffer(pkgName)
+
+		for fileName, file := range pkg.Files {
+			log.Printf("Processing file: %s", fileName)
+
+			for _, imp := range file.Imports {
+				if imp.Path != nil && imp.Path.Value != "" {
+					buf.AddImport(imp, mod)
+				}
+			}
+
+			for _, decl := range file.Decls {
+				switch d := decl.(type) {
+
+				case *ast.FuncDecl:
+					if err := processFuncDecl(buf, fset, d); err != nil {
+						return nil, err
+					}
+				case *ast.GenDecl:
+					if err := processGenDecl(buf, fset, d); err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
+	}
+
+	return buf, nil
+}
+
+func processFuncDecl(pkgBuf *PackageBuffer, fs *token.FileSet, funcDecl *ast.FuncDecl) error {
+	if funcDecl.Recv != nil {
+		if starExpr, ok := funcDecl.Recv.List[0].Type.(*ast.StarExpr); ok {
+			if ident, ok := starExpr.X.(*ast.Ident); ok {
+				fmt.Printf("Method belongs to struct: %s\n", ident.Name)
+				ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
+					// Add logic to process nodes within the function body
+					return true
+				})
+			}
+		}
+	}
+	return nil
+}
+
+func processGenDecl(buf *PackageBuffer, fs *token.FileSet, genDecl *ast.GenDecl) error {
+	if genDecl.Tok != token.TYPE {
+		return nil
+	}
+
+	for _, spec := range genDecl.Specs {
+		typeSpec, ok := spec.(*ast.TypeSpec)
+		if !ok {
+			continue
+		}
+
+		structType, ok := typeSpec.Type.(*ast.StructType)
+		if !ok {
+			continue
+		}
+
+		sType, usedPackages, err := entity.NewStructType(fs, structType, entity.NotEmbedded)
+		if err != nil {
+			return fmt.Errorf("failed to create new struct type: %w", err)
+		}
+
+		for _, p := range usedPackages {
+			if importPath, exist := buf.Imports[p.Alias]; exist {
+				sType.AddDependency(importPath, p.Element)
+			}
+		}
+
+		log.Printf("Found a struct: %s\n", typeSpec.Name.Name)
+		buf.AddStruct(sType, typeSpec.Name.Name)
+	}
+	return nil
+}
 
 func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 	// Parse the package name
@@ -42,7 +131,7 @@ func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 		case *ast.TypeSpec:
 			if structType, ok := t.Type.(*ast.StructType); ok {
 				currentStructName = t.Name.Name
-				sType, err := entity.NewStructType(fset, structType, entity.NotEmbedded, mod, true)
+				sType, _, err := entity.NewStructType(fset, structType, entity.NotEmbedded)
 				if err != nil {
 					return false
 				}
@@ -62,7 +151,19 @@ func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 					structIndex := fileManifest.StructsIndex[currentStructName]
 					// Use the index to get the reference to the current StructInfo from the Structs slice
 					currentStruct := fileManifest.Structs[structIndex]
-					currentStruct.AddDependency(fileManifest.Imports[xIdent.Name], t.Sel.Name)
+					if xIdent.Pos() > currentStruct.Pos && xIdent.Pos() < currentStruct.End {
+						// fmt.Println(xIdent.Name, t.Sel.Name, xIdent.Pos())
+						currentStruct.AddDependency(fileManifest.Imports[xIdent.Name], t.Sel.Name)
+					} else {
+						for _, s := range fileManifest.Structs {
+							fmt.Println(filePath, xIdent.Name, t.Sel.Name, xIdent.Pos(), xIdent.NamePos)
+							fmt.Println(s.Pos, s.End)
+							fmt.Println("+++++++++++++++++++")
+							if xIdent.Pos() > s.Pos && xIdent.Pos() < s.End {
+								s.AddDependency(fileManifest.Imports[xIdent.Name], t.Sel.Name)
+							}
+						}
+					}
 				}
 			}
 
@@ -130,6 +231,10 @@ func ParseGoFile(filePath string, mod string) (*snapshot.FileManifest, error) {
 		}
 	}
 
+	for _, v := range fileManifest.Structs {
+		v.DepsTree.Compress()
+	}
+
 	return fileManifest, nil
 }
 
@@ -165,3 +270,15 @@ func handleCallExpr(expr *ast.CallExpr) {
 		}
 	}
 }
+
+// func indexEncode(index, startPos, endPos uint64) uint64 {
+// 	return (index << 48) | (startPos << 24) | endPos
+// }
+
+// func indexDecode(combinedIndex uint64) (uint64, uint64, uint64) {
+// 	extractedIndex := (combinedIndex >> 48) & 0xFFFF
+// 	extractedStartPos := (combinedIndex >> 24) & 0xFFFFFF
+// 	extractedEndPos := combinedIndex & 0xFFFFFF
+
+// 	return extractedIndex, extractedStartPos, extractedEndPos
+// }

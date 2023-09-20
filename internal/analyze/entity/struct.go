@@ -49,27 +49,20 @@ type DependencyNode struct {
 }
 
 type DepsRadixTree struct {
-	Root     *DependencyNode
-	BasePath string
+	Root *DependencyNode
 }
 
-func NewDepsRadixTree(basePath string) *DepsRadixTree {
+func NewDepsRadixTree() *DepsRadixTree {
 	tree := &DepsRadixTree{
 		Root: &DependencyNode{
-			Prefix:   basePath,
 			Children: make(map[string]*DependencyNode),
 			Index:    -1,
 		},
-		BasePath: basePath,
 	}
 	return tree
 }
 
 func (t *DepsRadixTree) Insert(path string, index int) {
-	if strings.HasPrefix(path, t.BasePath) {
-		path = strings.TrimPrefix(path, t.BasePath)
-	}
-
 	currentNode := t.Root
 	pathSegments := strings.Split(path, "/")
 
@@ -91,29 +84,46 @@ func (t *DepsRadixTree) Insert(path string, index int) {
 		}
 	}
 }
+
 func (t *DepsRadixTree) Find(path string) (bool, int) {
 	currentNode := t.Root
 	pathSegments := strings.Split(path, "/")
 
 	for _, segment := range pathSegments {
 		if segment == "" {
-			// Skip empty segments that may occur due to double slashes or slashes at the beginning/end of the line
 			continue
 		}
 
 		if nextNode, ok := currentNode.Children[segment]; ok {
 			currentNode = nextNode
 		} else {
-			return false, -1 // Index -1 means no dependency
+			return false, -1
 		}
 	}
 	return true, currentNode.Index
 }
 
+func (t *DepsRadixTree) Compress() {
+	compress(t.Root)
+}
+
+func compress(node *DependencyNode) {
+	for prefix, child := range node.Children {
+		compress(child)
+
+		if len(child.Children) == 1 {
+			for childPrefix, grandChild := range child.Children {
+				node.Children[prefix+"/"+childPrefix] = grandChild
+				delete(node.Children, prefix)
+			}
+		}
+	}
+}
+
 type StructInfo struct {
 	_   [0]int
-	pos token.Pos
-	end token.Pos
+	Pos token.Pos
+	End token.Pos
 
 	Fields      []*FieldInfo
 	FieldsIndex map[string]int
@@ -145,66 +155,119 @@ func (st *StructInfo) AddDependency(importPath, element string) {
 	}
 }
 
-func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool, modBasePath string, createDepTree bool) (*StructInfo, error) {
-	fields, fieldsIndex, err := extractFieldMap(fset, res.Fields.List)
+func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructInfo, []usedPackage, error) {
+	mapMetaData, err := extractFieldMap(fset, res.Fields.List)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract field map: %w", err)
+		return nil, nil, fmt.Errorf("failed to extract field map: %w", err)
 	}
 
 	methods := []*MethodInfo{}
 	methodsIndex := make(map[string]int)
 
 	return &StructInfo{
-		pos:          res.Pos(),
-		end:          res.End(),
-		Fields:       fields,
-		FieldsIndex:  fieldsIndex,
-		Methods:      methods,
-		MethodsIndex: methodsIndex,
-		Deps:         []*DependencyInfo{},
-		DepsTree:     NewDepsRadixTree(modBasePath),
-		IsEmbedded:   isEmbedded,
-	}, nil
+			Pos:          res.Pos(),
+			End:          res.End(),
+			Fields:       mapMetaData.fieldsSet,
+			FieldsIndex:  mapMetaData.fieldsIndex,
+			Methods:      methods,
+			MethodsIndex: methodsIndex,
+			Deps:         []*DependencyInfo{},
+			DepsTree:     NewDepsRadixTree(),
+			IsEmbedded:   isEmbedded,
+		},
+		mapMetaData.usedPackages,
+		nil
 }
 
-func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) ([]*FieldInfo, map[string]int, error) {
+type usedPackage struct {
+	_              [0]int
+	Alias, Element string
+}
+
+type fieldMapMetaData struct {
+	usedPackages []usedPackage
+	fieldsSet    []*FieldInfo
+	fieldsIndex  map[string]int
+}
+
+func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMetaData, error) {
 	fields := make([]*FieldInfo, 0, len(fieldList))
 	fieldsIndex := make(map[string]int, len(fieldList))
+	usedPackages := []usedPackage{}
 
 	for i, field := range fieldList {
-		fieldTypeString, embedded, err := extractFieldType(fset, field.Type)
+		fieldMetaData, err := extractFieldType(fset, field.Type)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
+
+		if fieldMetaData.isImported {
+			for i := 0; i < len(fieldMetaData.usedPackages); i++ {
+				usedPackages = append(usedPackages, fieldMetaData.usedPackages[i])
+			}
+		}
+
 		for _, name := range field.Names {
 			fieldsIndex[name.Name] = i
 			fields = append(fields, &FieldInfo{
 				pos:      name.Pos(),
 				end:      name.End(),
-				Type:     fieldTypeString,
-				Embedded: embedded,
+				Type:     fieldMetaData._type,
+				Embedded: fieldMetaData.embeddedStruct,
 				IsPublic: name.IsExported(),
 			})
 		}
 	}
-	return fields, fieldsIndex, nil
+
+	return &fieldMapMetaData{
+		fieldsSet:    fields,
+		usedPackages: usedPackages,
+		fieldsIndex:  fieldsIndex,
+	}, nil
 }
 
-func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (string, *StructInfo, error) {
+type fieldTypeMetaData struct {
+	_type          string
+	usedPackages   []usedPackage
+	isImported     bool
+	embeddedStruct *StructInfo
+}
+
+func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (*fieldTypeMetaData, error) {
 	switch ft := fieldType.(type) {
 	case *ast.StructType:
-		embedded, err := NewStructType(fset, ft, true, "", false)
+		embedded, usedPackages, err := NewStructType(fset, ft, true)
 		if err != nil {
-			return "", nil, err
+			return nil, err
 		}
-		return CustomTypeStruct, embedded, nil
+
+		return &fieldTypeMetaData{
+			_type:          CustomTypeStruct,
+			usedPackages:   usedPackages,
+			embeddedStruct: embedded,
+		}, nil
+
 	case *ast.SelectorExpr:
-		return ft.Sel.Name, nil, nil
+		if ident, ok := ft.X.(*ast.Ident); ok {
+			return &fieldTypeMetaData{
+				_type:        ft.Sel.Name,
+				usedPackages: []usedPackage{{Alias: ident.Name, Element: ft.Sel.Name}},
+				isImported:   true,
+			}, nil
+		}
+
+		return &fieldTypeMetaData{
+			_type: ft.Sel.Name,
+		}, nil
+
 	default:
 		var buf bytes.Buffer
 		if err := format.Node(&buf, fset, fieldType); err != nil {
-			return "", nil, fmt.Errorf("failed to format node: %w", err)
+			return nil, fmt.Errorf("failed to format node: %w", err)
 		}
-		return buf.String(), nil, nil
+
+		return &fieldTypeMetaData{
+			_type: buf.String(),
+		}, nil
 	}
 }
