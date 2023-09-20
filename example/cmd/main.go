@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/g10z3r/archx/example/internal/data"
-	mt "github.com/g10z3r/archx/example/internal/metadata"
 )
 
 type Go interface {
@@ -59,13 +58,6 @@ func (p *Person) ChangeLastName(newLastName string) *Person {
 	if newLastName != p.LastName {
 		p.LastName = newLastName
 	}
-
-	return p
-}
-
-func (p *Person) AgeInc() *Person {
-	mt.MetadataSome()
-	p.Age = p.Age + 1
 
 	return p
 }
