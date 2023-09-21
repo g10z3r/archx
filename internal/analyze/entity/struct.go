@@ -7,11 +7,14 @@ import (
 	"go/format"
 	"go/token"
 	"strings"
+	"unicode"
 )
 
 const (
 	Embedded    = true
 	NotEmbedded = false
+
+	onlyPreinitialized = false
 
 	CustomTypeStruct = "struct"
 )
@@ -30,11 +33,20 @@ type Usage struct {
 	Uniq  int
 }
 
-type MethodInfo struct {
-	Pos      token.Pos
-	End      token.Pos
-	Usages   map[string]Usage
-	IsPublic bool
+type Method struct {
+	Start      token.Pos
+	End        token.Pos
+	UsedFields map[string]Usage
+	IsPublic   bool
+}
+
+func NewMethod(res *ast.FuncDecl) *Method {
+	return &Method{
+		Start:      res.Pos(),
+		End:        res.End(),
+		UsedFields: make(map[string]Usage),
+		IsPublic:   unicode.IsUpper(rune(res.Name.Name[0])),
+	}
 }
 
 type DependencyInfo struct {
@@ -128,13 +140,14 @@ type StructInfo struct {
 	Fields      []*FieldInfo
 	FieldsIndex map[string]int
 
-	Methods      []*MethodInfo
+	Methods      []*Method
 	MethodsIndex map[string]int
 
 	Deps     []*DependencyInfo
 	DepsTree *DepsRadixTree
 
-	IsEmbedded bool
+	isEmbedded bool
+	IsFull     bool
 }
 
 func (st *StructInfo) AddDependency(importPath, element string) {
@@ -155,13 +168,42 @@ func (st *StructInfo) AddDependency(importPath, element string) {
 	}
 }
 
+func (si *StructInfo) AddMethod(metdod *Method, name string) {
+	si.Methods = append(si.Methods, metdod)
+	si.MethodsIndex[name] = len(si.Methods) - 1
+}
+
+func (si *StructInfo) SyncMethods(from *StructInfo) {
+	for methodName, i := range from.MethodsIndex {
+		if _, exists := si.MethodsIndex[methodName]; !exists {
+			fmt.Println(from.MethodsIndex)
+			fmt.Println(si.MethodsIndex)
+			si.AddMethod(from.Methods[i], methodName)
+		}
+	}
+}
+
+func NewStructPreInit(name string) *StructInfo {
+	methods := []*Method{}
+	methodsIndex := make(map[string]int)
+
+	return &StructInfo{
+		Methods:      methods,
+		MethodsIndex: methodsIndex,
+		Deps:         []*DependencyInfo{},
+		DepsTree:     NewDepsRadixTree(),
+		isEmbedded:   NotEmbedded,
+		IsFull:       onlyPreinitialized,
+	}
+}
+
 func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructInfo, []usedPackage, error) {
 	mapMetaData, err := extractFieldMap(fset, res.Fields.List)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to extract field map: %w", err)
 	}
 
-	methods := []*MethodInfo{}
+	methods := []*Method{}
 	methodsIndex := make(map[string]int)
 
 	return &StructInfo{
@@ -173,7 +215,8 @@ func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*
 			MethodsIndex: methodsIndex,
 			Deps:         []*DependencyInfo{},
 			DepsTree:     NewDepsRadixTree(),
-			IsEmbedded:   isEmbedded,
+			isEmbedded:   isEmbedded,
+			IsFull:       true,
 		},
 		mapMetaData.usedPackages,
 		nil

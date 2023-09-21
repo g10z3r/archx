@@ -39,18 +39,59 @@ func (fm *PackageBuffer) AddImport(importSpec *ast.ImportSpec, mod string) {
 	fm.Imports[path.Base(importPath)] = importPath
 }
 
-func (pb *PackageBuffer) AddStruct(structType *entity.StructInfo, structName string) {
+// func (pb *PackageBuffer) AddStruct(structType *entity.StructInfo, structName string) {
+// 	pb.mutex.Lock()
+// 	defer pb.mutex.Unlock()
+
+// 	pb.Structs = append(pb.Structs, structType)
+// 	pb.StructsIndex[structName] = len(pb.Structs) - 1
+// }
+
+func (pb *PackageBuffer) AddStruct(incomingStructType *entity.StructInfo, incomingStructName string) int {
 	pb.mutex.Lock()
 	defer pb.mutex.Unlock()
 
-	pb.Structs = append(pb.Structs, structType)
-	pb.StructsIndex[structName] = len(pb.Structs) - 1
+	if existingIndex, exists := pb.StructsIndex[incomingStructName]; exists {
+		// Если структура уже существует в буфере
+		existingStruct := pb.Structs[existingIndex]
+
+		if !existingStruct.IsFull && !incomingStructType.IsFull {
+			// Просто обновляем методы и заменяем структуру в буфере
+			existingStruct.SyncMethods(incomingStructType)
+			pb.Structs[existingIndex] = existingStruct
+			return existingIndex
+		}
+
+		if !existingStruct.IsFull && incomingStructType.IsFull {
+			// Синхронизируем методы и заменяем структуру в буфере
+			incomingStructType.SyncMethods(existingStruct)
+			pb.Structs[existingIndex] = incomingStructType
+			return existingIndex
+		}
+	}
+
+	// Если структуры нет в буфере, просто добавляем её
+	pb.Structs = append(pb.Structs, incomingStructType)
+	index := len(pb.Structs) - 1
+	pb.StructsIndex[incomingStructName] = index
+
+	return index
+}
+
+func (pb *PackageBuffer) GetStructByName(name string) (*entity.StructInfo, int, bool) {
+	index, exist := pb.StructsIndex[name]
+	if !exist {
+		return nil, 0, false
+	}
+
+	return pb.Structs[index], index, true
 }
 
 func (fm *PackageBuffer) HasStructType(structName string) bool {
 	if fm.StructsIndex == nil {
 		return false
 	}
+
 	_, exists := fm.StructsIndex[structName]
 	return exists
 }

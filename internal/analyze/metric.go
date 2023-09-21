@@ -26,7 +26,7 @@ func CalculateLCOM(s *entity.StructInfo) float32 {
 	for fieldName := range s.FieldsIndex {
 		for _, methodInfo := range s.Methods {
 			// Check if the current method uses the current field
-			if _, exists := methodInfo.Usages[fieldName]; exists {
+			if _, exists := methodInfo.UsedFields[fieldName]; exists {
 				Q++
 			} else {
 				P++
@@ -54,7 +54,7 @@ func CalculateLCOM96B(s *entity.StructInfo) float32 {
 	var sum float32 = 0.0
 	for _, method := range s.Methods {
 		// The number of attributes that method i works with
-		m_i := len(method.Usages)
+		m_i := len(method.UsedFields)
 		sum += 1.0 - (float32(m_i) / M)
 	}
 

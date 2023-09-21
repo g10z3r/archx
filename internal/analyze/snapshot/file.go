@@ -102,16 +102,16 @@ func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName stri
 
 	structInfo := fm.Structs[structIndex]
 
-	var methodInfo *entity.MethodInfo
+	var methodInfo *entity.Method
 	methodIndex, exists := structInfo.MethodsIndex[methodName]
 	if exists {
 		methodInfo = structInfo.Methods[methodIndex]
 	} else {
-		methodInfo = &entity.MethodInfo{
-			Pos:      token.NoPos, // TODO: Set correct position
-			End:      token.NoPos, // TODO: Set correct end
-			Usages:   make(map[string]entity.Usage),
-			IsPublic: false, // TODO: Set correct visibility
+		methodInfo = &entity.Method{
+			Start:      token.NoPos, // TODO: Set correct position
+			End:        token.NoPos, // TODO: Set correct end
+			UsedFields: make(map[string]entity.Usage),
+			IsPublic:   false, // TODO: Set correct visibility
 		}
 
 		// Add new information about the method to the slice and index
@@ -120,7 +120,7 @@ func (fm *FileManifest) AddMethodToStruct(structName, methodName, fieldName stri
 	}
 
 	// Update field usage information for this method
-	methodInfo.Usages[fieldName] = fieldUsage
+	methodInfo.UsedFields[fieldName] = fieldUsage
 
 	return nil
 }

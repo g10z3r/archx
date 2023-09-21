@@ -53,18 +53,72 @@ func ParsePackage(dirPath string, mod string) (*PackageBuffer, error) {
 	return buf, nil
 }
 
-func processFuncDecl(pkgBuf *PackageBuffer, fs *token.FileSet, funcDecl *ast.FuncDecl) error {
-	if funcDecl.Recv != nil {
-		if starExpr, ok := funcDecl.Recv.List[0].Type.(*ast.StarExpr); ok {
-			if ident, ok := starExpr.X.(*ast.Ident); ok {
-				fmt.Printf("Method belongs to struct: %s\n", ident.Name)
-				ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
-					// Add logic to process nodes within the function body
-					return true
-				})
+func processFuncDecl(buf *PackageBuffer, fs *token.FileSet, funcDecl *ast.FuncDecl) error {
+	if funcDecl.Recv == nil {
+		return nil
+	}
+
+	starExpr, ok := funcDecl.Recv.List[0].Type.(*ast.StarExpr)
+	if !ok {
+		return nil
+	}
+
+	parentStruct, ok := starExpr.X.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+
+	newMethod := entity.NewMethod(funcDecl)
+
+	var sType *entity.StructInfo
+	var structIndex int
+	var isNew bool
+
+	if !buf.HasStructType(parentStruct.Name) {
+		sType = entity.NewStructPreInit(parentStruct.Name)
+		structIndex = buf.AddStruct(sType, parentStruct.Name)
+	} else {
+		structIndex = buf.StructsIndex[parentStruct.Name]
+		sType = buf.Structs[structIndex]
+	}
+
+	log.Printf("Method %s belongs to struct: %s\n", funcDecl.Name.Name, parentStruct.Name)
+
+	receiverName := funcDecl.Recv.List[0].Names[0].Name
+	ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
+		switch expr := n.(type) {
+		case *ast.SelectorExpr:
+			if ident, ok := expr.X.(*ast.Ident); ok {
+				stName, _ := expr.X.(*ast.Ident)
+				fmt.Println(stName.Name, expr.Sel.Name, funcDecl.Name.Name, ident.Name, parentStruct.Name)
+				if ident.Name == receiverName {
+					usage, exists := newMethod.UsedFields[expr.Sel.Name]
+					if exists {
+						usage.Total++
+					} else {
+						usage = entity.Usage{
+							Total: 1,
+							Uniq:  1,
+						}
+					}
+					newMethod.UsedFields[expr.Sel.Name] = usage
+					fmt.Printf("Accessing field %s of struct %s\n", expr.Sel.Name, ident.Name)
+				}
 			}
 		}
+
+		return true
+	})
+
+	if isNew {
+		buf.AddStruct(sType, parentStruct.Name)
+		return nil
 	}
+
+	buf.Structs[structIndex].AddMethod(newMethod, funcDecl.Name.Name)
+
+	// TODO: add deps
+
 	return nil
 }
 
@@ -90,7 +144,7 @@ func processGenDecl(buf *PackageBuffer, fs *token.FileSet, genDecl *ast.GenDecl)
 		}
 
 		for _, p := range usedPackages {
-			if importPath, exist := buf.Imports[p.Alias]; exist {
+			if importPath, exists := buf.Imports[p.Alias]; exists {
 				sType.AddDependency(importPath, p.Element)
 			}
 		}
