@@ -1,6 +1,6 @@
-package analyze
+package scaner
 
-import "github.com/g10z3r/archx/internal/analyze/entity"
+import "github.com/g10z3r/archx/internal/scaner/entity"
 
 const (
 	defaultLCOMValue         = 0.0

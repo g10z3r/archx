@@ -3,7 +3,7 @@ package buffer
 import (
 	"fmt"
 
-	"github.com/g10z3r/archx/internal/analyze/entity"
+	"github.com/g10z3r/archx/internal/scaner/entity"
 )
 
 type UpsertStructEvent struct {
@@ -28,12 +28,12 @@ func (e *UpsertStructEvent) Execute(buffer bufferBus, errChan chan<- error) {
 	if existingIndex, exists := buf.structsIndex[e.StructName]; exists {
 		existingStruct := buf.structs[existingIndex]
 
-		if !existingStruct.IsFull && !e.StructInfo.IsFull {
+		if !existingStruct.Incompplete && !e.StructInfo.Incompplete {
 			existingStruct.SyncMethods(e.StructInfo)
 			buf.structs[existingIndex] = existingStruct
 		}
 
-		if !existingStruct.IsFull && e.StructInfo.IsFull {
+		if !existingStruct.Incompplete && e.StructInfo.Incompplete {
 			e.StructInfo.SyncMethods(existingStruct)
 			buf.structs[existingIndex] = e.StructInfo
 		}

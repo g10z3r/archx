@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/g10z3r/archx/internal/analyze"
+	"github.com/g10z3r/archx/internal/scaner"
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 	// 	}
 	// }
 
-	buf, err := analyze.ParsePackage("./example/cmd", "github.com/g10z3r/archx")
+	buf, err := scaner.ScanPackage("./example/cmd", "github.com/g10z3r/archx")
 	if err != nil {
 		fmt.Println(err)
 		return

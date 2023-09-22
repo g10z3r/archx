@@ -1,7 +1,7 @@
 package snapshot
 
 import (
-	"github.com/g10z3r/archx/internal/analyze/entity"
+	"github.com/g10z3r/archx/internal/scaner/entity"
 )
 
 type PackageManifest struct {

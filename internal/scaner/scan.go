@@ -1,4 +1,4 @@
-package analyze
+package scaner
 
 import (
 	"fmt"
@@ -9,12 +9,12 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/g10z3r/archx/internal/analyze/buffer"
-	"github.com/g10z3r/archx/internal/analyze/entity"
-	"github.com/g10z3r/archx/internal/analyze/snapshot"
+	"github.com/g10z3r/archx/internal/scaner/buffer"
+	"github.com/g10z3r/archx/internal/scaner/entity"
+	"github.com/g10z3r/archx/internal/scaner/snapshot"
 )
 
-func ParsePackage(dirPath string, mod string) (*buffer.ManagerBuffer, error) {
+func ScanPackage(dirPath string, mod string) (*buffer.ManagerBuffer, error) {
 	var buf *buffer.ManagerBuffer
 	errChan := make(chan error, 1)
 

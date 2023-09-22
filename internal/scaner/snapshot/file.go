@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/g10z3r/archx/internal/analyze/entity"
+	"github.com/g10z3r/archx/internal/scaner/entity"
 )
 
 type FileManifest struct {
