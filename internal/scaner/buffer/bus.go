@@ -32,10 +32,8 @@ type BufferEventBus struct {
 	errChan   chan error
 }
 
-func (buf *BufferEventBus) SendEvent(event ...bufferEvent) {
-	for i := 0; i < len(event); i++ {
-		buf.eventChan <- event[i]
-	}
+func (buf *BufferEventBus) SendEvent(event bufferEvent) {
+	buf.eventChan <- event
 }
 
 func (buf *BufferEventBus) handleEvent(event bufferEvent) {
