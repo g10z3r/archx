@@ -9,12 +9,14 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/g10z3r/archx/internal/analyze/buffer"
 	"github.com/g10z3r/archx/internal/analyze/entity"
 	"github.com/g10z3r/archx/internal/analyze/snapshot"
 )
 
-func ParsePackage(dirPath string, mod string) (*PackageBuffer, error) {
-	var buf *PackageBuffer
+func ParsePackage(dirPath string, mod string) (*buffer.ManagerBuffer, error) {
+	var buf *buffer.ManagerBuffer
+	errChan := make(chan error, 1)
 
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, dirPath, nil, parser.AllErrors)
@@ -22,15 +24,19 @@ func ParsePackage(dirPath string, mod string) (*PackageBuffer, error) {
 		return nil, err
 	}
 
-	for pkgName, pkg := range pkgs {
-		buf = NewPackageBuffer(pkgName)
+	for _, pkg := range pkgs {
+		buf = buffer.NewManagerBuffer(errChan)
+		go buf.Start()
 
 		for fileName, file := range pkg.Files {
 			log.Printf("Processing file: %s", fileName)
 
 			for _, imp := range file.Imports {
 				if imp.Path != nil && imp.Path.Value != "" {
-					buf.AddImport(imp, mod)
+					buf.SendEvent(&buffer.AddImportEvent{
+						Import: entity.NewImport(imp),
+						Mod:    mod,
+					})
 				}
 			}
 
@@ -48,12 +54,15 @@ func ParsePackage(dirPath string, mod string) (*PackageBuffer, error) {
 				}
 			}
 		}
+
+		buf.WaitGroup.Wait()
+		buf.Stop()
 	}
 
 	return buf, nil
 }
 
-func processFuncDecl(buf *PackageBuffer, fs *token.FileSet, funcDecl *ast.FuncDecl) error {
+func processFuncDecl(buf *buffer.ManagerBuffer, fs *token.FileSet, funcDecl *ast.FuncDecl) error {
 	if funcDecl.Recv == nil {
 		return nil
 	}
@@ -74,12 +83,12 @@ func processFuncDecl(buf *PackageBuffer, fs *token.FileSet, funcDecl *ast.FuncDe
 	var structIndex int
 	var isNew bool
 
-	if !buf.HasStructType(parentStruct.Name) {
+	if !buf.StructBuffer.IsPresent(parentStruct.Name) {
+		isNew = true
 		sType = entity.NewStructPreInit(parentStruct.Name)
-		structIndex = buf.AddStruct(sType, parentStruct.Name)
 	} else {
-		structIndex = buf.StructsIndex[parentStruct.Name]
-		sType = buf.Structs[structIndex]
+		structIndex = buf.StructBuffer.StructsIndex[parentStruct.Name]
+		sType = buf.StructBuffer.Structs[structIndex]
 	}
 
 	log.Printf("Method %s belongs to struct: %s\n", funcDecl.Name.Name, parentStruct.Name)
@@ -111,18 +120,31 @@ func processFuncDecl(buf *PackageBuffer, fs *token.FileSet, funcDecl *ast.FuncDe
 	})
 
 	if isNew {
-		buf.AddStruct(sType, parentStruct.Name)
-		return nil
+		buf.SendEvent(
+			&buffer.UpsertStructEvent{
+				StructInfo: sType,
+				StructName: parentStruct.Name,
+			},
+		)
 	}
 
-	buf.Structs[structIndex].AddMethod(newMethod, funcDecl.Name.Name)
+	buf.WaitGroup.Add(1)
+	go func() {
+		defer buf.WaitGroup.Done()
 
-	// TODO: add deps
+		buf.SendEvent(
+			&buffer.AddMethodEvent{
+				StructIndex: structIndex,
+				Method:      newMethod,
+				MethodName:  funcDecl.Name.Name,
+			},
+		)
+	}()
 
 	return nil
 }
 
-func processGenDecl(buf *PackageBuffer, fs *token.FileSet, genDecl *ast.GenDecl) error {
+func processGenDecl(buf *buffer.ManagerBuffer, fs *token.FileSet, genDecl *ast.GenDecl) error {
 	if genDecl.Tok != token.TYPE {
 		return nil
 	}
@@ -144,13 +166,25 @@ func processGenDecl(buf *PackageBuffer, fs *token.FileSet, genDecl *ast.GenDecl)
 		}
 
 		for _, p := range usedPackages {
-			if importPath, exists := buf.Imports[p.Alias]; exists {
+			if importPath, exists := buf.ImportBuffer.Imports[p.Alias]; exists {
 				sType.AddDependency(importPath, p.Element)
 			}
 		}
 
 		log.Printf("Found a struct: %s\n", typeSpec.Name.Name)
-		buf.AddStruct(sType, typeSpec.Name.Name)
+
+		buf.WaitGroup.Add(1)
+		go func() {
+			defer buf.WaitGroup.Done()
+
+			buf.SendEvent(
+				&buffer.UpsertStructEvent{
+					StructInfo: sType,
+					StructName: typeSpec.Name.Name,
+				},
+			)
+		}()
+
 	}
 	return nil
 }
