@@ -14,8 +14,8 @@ import (
 	"github.com/g10z3r/archx/internal/scaner/snapshot"
 )
 
-func ScanPackage(dirPath string, mod string) (*buffer.ManagerBuffer, error) {
-	var buf *buffer.ManagerBuffer
+func ScanPackage(dirPath string, mod string) (*buffer.BufferEventBus, error) {
+	var buf *buffer.BufferEventBus
 	errChan := make(chan error, 1)
 
 	fset := token.NewFileSet()
@@ -25,7 +25,7 @@ func ScanPackage(dirPath string, mod string) (*buffer.ManagerBuffer, error) {
 	}
 
 	for _, pkg := range pkgs {
-		buf = buffer.NewManagerBuffer(errChan)
+		buf = buffer.NewBufferEventBus(errChan)
 		go buf.Start()
 
 		for fileName, file := range pkg.Files {
@@ -62,7 +62,7 @@ func ScanPackage(dirPath string, mod string) (*buffer.ManagerBuffer, error) {
 	return buf, nil
 }
 
-func processFuncDecl(buf *buffer.ManagerBuffer, fs *token.FileSet, funcDecl *ast.FuncDecl) error {
+func processFuncDecl(buf *buffer.BufferEventBus, fs *token.FileSet, funcDecl *ast.FuncDecl) error {
 	if funcDecl.Recv == nil {
 		return nil
 	}
@@ -144,7 +144,7 @@ func processFuncDecl(buf *buffer.ManagerBuffer, fs *token.FileSet, funcDecl *ast
 	return nil
 }
 
-func processGenDecl(buf *buffer.ManagerBuffer, fs *token.FileSet, genDecl *ast.GenDecl) error {
+func processGenDecl(buf *buffer.BufferEventBus, fs *token.FileSet, genDecl *ast.GenDecl) error {
 	if genDecl.Tok != token.TYPE {
 		return nil
 	}

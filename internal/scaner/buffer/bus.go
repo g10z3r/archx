@@ -21,7 +21,7 @@ type bufferEvent interface {
 	Execute(buffer bufferBus, errChan chan<- error)
 }
 
-type ManagerBuffer struct {
+type BufferEventBus struct {
 	StructBuffer *StructBuffer
 	ImportBuffer *ImportBuffer
 
@@ -32,13 +32,13 @@ type ManagerBuffer struct {
 	errChan   chan error
 }
 
-func (buf *ManagerBuffer) SendEvent(event ...bufferEvent) {
+func (buf *BufferEventBus) SendEvent(event ...bufferEvent) {
 	for i := 0; i < len(event); i++ {
 		buf.eventChan <- event[i]
 	}
 }
 
-func (buf *ManagerBuffer) handleEvent(event bufferEvent) {
+func (buf *BufferEventBus) handleEvent(event bufferEvent) {
 	switch event.ToBuffer() {
 	case toImportsBuffer:
 		buf.ImportBuffer.HandleEvent(event, buf.errChan)
@@ -49,7 +49,7 @@ func (buf *ManagerBuffer) handleEvent(event bufferEvent) {
 	}
 }
 
-func (buf *ManagerBuffer) Start() {
+func (buf *BufferEventBus) Start() {
 	for {
 		select {
 		case event, ok := <-buf.eventChan:
@@ -63,12 +63,12 @@ func (buf *ManagerBuffer) Start() {
 	}
 }
 
-func (mb *ManagerBuffer) Stop() {
+func (mb *BufferEventBus) Stop() {
 	close(mb.stopChan)
 }
 
-func NewManagerBuffer(errChan chan error) *ManagerBuffer {
-	return &ManagerBuffer{
+func NewBufferEventBus(errChan chan error) *BufferEventBus {
+	return &BufferEventBus{
 		StructBuffer: newStructBuffer(),
 		ImportBuffer: newImportBuffer(),
 		WaitGroup:    sync.WaitGroup{},
