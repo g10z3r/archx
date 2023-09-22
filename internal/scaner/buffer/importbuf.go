@@ -7,7 +7,7 @@ type ImportBuffer struct {
 	lenght int
 	size   int
 
-	imports map[string]string
+	Imports map[string]string
 }
 
 func (buf *ImportBuffer) HandleEvent(event bufferEvent, errChan chan<- error) {
@@ -32,13 +32,13 @@ func (buf *ImportBuffer) IsPresent(key string) (string, bool) {
 	buf.mutex.Lock()
 	defer buf.mutex.Unlock()
 
-	path, exists := buf.imports[key]
+	path, exists := buf.Imports[key]
 	return path, exists
 }
 
 func newImportBuffer() *ImportBuffer {
 	return &ImportBuffer{
 		mutex:   sync.Mutex{},
-		imports: make(map[string]string),
+		Imports: make(map[string]string),
 	}
 }

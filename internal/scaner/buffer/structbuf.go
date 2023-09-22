@@ -11,8 +11,8 @@ type StructBuffer struct {
 	lenght int
 	size   int
 
-	structs      []*entity.StructInfo
-	structsIndex map[string]int
+	Structs      []*entity.StructInfo
+	StructsIndex map[string]int
 }
 
 func (buf *StructBuffer) HandleEvent(event bufferEvent, errChan chan<- error) {
@@ -37,7 +37,7 @@ func (buf *StructBuffer) IsPresent(key string) bool {
 	buf.mutex.Lock()
 	defer buf.mutex.Unlock()
 
-	_, exists := buf.structsIndex[key]
+	_, exists := buf.StructsIndex[key]
 	return exists
 }
 
@@ -45,20 +45,20 @@ func (buf *StructBuffer) GetByIndex(index int) *entity.StructInfo {
 	buf.mutex.Lock()
 	defer buf.mutex.Unlock()
 
-	return buf.structs[index]
+	return buf.Structs[index]
 }
 
 func (buf *StructBuffer) GetIndex(name string) int {
 	buf.mutex.Lock()
 	defer buf.mutex.Unlock()
 
-	return buf.structsIndex[name]
+	return buf.StructsIndex[name]
 }
 
 func newStructBuffer() *StructBuffer {
 	return &StructBuffer{
 		mutex:        sync.Mutex{},
-		structs:      make([]*entity.StructInfo, 0),
-		structsIndex: make(map[string]int),
+		Structs:      make([]*entity.StructInfo, 0),
+		StructsIndex: make(map[string]int),
 	}
 }
