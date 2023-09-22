@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	toImportsBuffer = iota
+	toImportsBuffer = iota << 1
 	toStructsBuffer
 )
 
