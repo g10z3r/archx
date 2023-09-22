@@ -32,10 +32,10 @@ func (e *AddImportEvent) Execute(buffer bufferBus, errChan chan<- error) {
 	}
 
 	if e.Import.WithAlias {
-		buf.Imports[e.Import.Alias] = e.Import.Path
+		buf.imports[e.Import.Alias] = e.Import.Path
 		return
 	}
 
-	buf.Imports[path.Base(e.Import.Path)] = e.Import.Path
+	buf.imports[path.Base(e.Import.Path)] = e.Import.Path
 
 }

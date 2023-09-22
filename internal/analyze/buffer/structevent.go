@@ -25,22 +25,22 @@ func (e *UpsertStructEvent) Execute(buffer bufferBus, errChan chan<- error) {
 	buf.mutex.Lock()
 	defer buf.mutex.Unlock()
 
-	if existingIndex, exists := buf.StructsIndex[e.StructName]; exists {
-		existingStruct := buf.Structs[existingIndex]
+	if existingIndex, exists := buf.structsIndex[e.StructName]; exists {
+		existingStruct := buf.structs[existingIndex]
 
 		if !existingStruct.IsFull && !e.StructInfo.IsFull {
 			existingStruct.SyncMethods(e.StructInfo)
-			buf.Structs[existingIndex] = existingStruct
+			buf.structs[existingIndex] = existingStruct
 		}
 
 		if !existingStruct.IsFull && e.StructInfo.IsFull {
 			e.StructInfo.SyncMethods(existingStruct)
-			buf.Structs[existingIndex] = e.StructInfo
+			buf.structs[existingIndex] = e.StructInfo
 		}
 	} else {
-		buf.Structs = append(buf.Structs, e.StructInfo)
-		index := len(buf.Structs) - 1
-		buf.StructsIndex[e.StructName] = index
+		buf.structs = append(buf.structs, e.StructInfo)
+		index := len(buf.structs) - 1
+		buf.structsIndex[e.StructName] = index
 	}
 
 }
@@ -65,5 +65,5 @@ func (e *AddMethodEvent) Execute(buffer bufferBus, errChan chan<- error) {
 	buf.mutex.Lock()
 	defer buf.mutex.Unlock()
 
-	buf.Structs[e.StructIndex].AddMethod(e.Method, e.MethodName)
+	buf.structs[e.StructIndex].AddMethod(e.Method, e.MethodName)
 }

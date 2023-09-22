@@ -87,8 +87,8 @@ func processFuncDecl(buf *buffer.ManagerBuffer, fs *token.FileSet, funcDecl *ast
 		isNew = true
 		sType = entity.NewStructPreInit(parentStruct.Name)
 	} else {
-		structIndex = buf.StructBuffer.StructsIndex[parentStruct.Name]
-		sType = buf.StructBuffer.Structs[structIndex]
+		structIndex = buf.StructBuffer.GetIndex(parentStruct.Name)
+		sType = buf.StructBuffer.GetByIndex(structIndex)
 	}
 
 	log.Printf("Method %s belongs to struct: %s\n", funcDecl.Name.Name, parentStruct.Name)
@@ -166,7 +166,7 @@ func processGenDecl(buf *buffer.ManagerBuffer, fs *token.FileSet, genDecl *ast.G
 		}
 
 		for _, p := range usedPackages {
-			if importPath, exists := buf.ImportBuffer.Imports[p.Alias]; exists {
+			if importPath, exists := buf.ImportBuffer.IsPresent(p.Alias); exists {
 				sType.AddDependency(importPath, p.Element)
 			}
 		}
