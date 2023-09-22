@@ -17,7 +17,7 @@ func (e *AddImportEvent) ToBuffer() int {
 	return toImportsBuffer
 }
 
-func (e *AddImportEvent) Execute(buffer busBuffer, errChan chan<- error) {
+func (e *AddImportEvent) Execute(buffer bufferBus, errChan chan<- error) {
 	buf, ok := buffer.(*ImportBuffer)
 	if !ok {
 		errChan <- fmt.Errorf("buffer is not of type *StructBuffer")

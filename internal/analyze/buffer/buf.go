@@ -10,7 +10,7 @@ const (
 	toStructsBuffer
 )
 
-type busBuffer interface {
+type bufferBus interface {
 	Len() int
 	Size() int
 	HandleEvent(event bufferEvent, errChan chan<- error)
@@ -18,7 +18,7 @@ type busBuffer interface {
 
 type bufferEvent interface {
 	ToBuffer() int
-	Execute(buffer busBuffer, errChan chan<- error)
+	Execute(buffer bufferBus, errChan chan<- error)
 }
 
 type ManagerBuffer struct {
