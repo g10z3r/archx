@@ -17,7 +17,7 @@ type StructBuffer struct {
 	StructsIndex map[string]int
 }
 
-func (buf *StructBuffer) HandleEvent(event Event, errChan chan<- error) {
+func (buf *StructBuffer) HandleEvent(event bufferEvent, errChan chan<- error) {
 	event.Execute(buf, errChan)
 }
 

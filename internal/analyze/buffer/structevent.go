@@ -15,7 +15,7 @@ func (e *UpsertStructEvent) ToBuffer() int {
 	return toStructsBuffer
 }
 
-func (e *UpsertStructEvent) Execute(buffer Buffer, errChan chan<- error) {
+func (e *UpsertStructEvent) Execute(buffer busBuffer, errChan chan<- error) {
 	buf, ok := buffer.(*StructBuffer)
 	if !ok {
 		errChan <- fmt.Errorf("buffer is not of type *StructBuffer")
@@ -55,7 +55,7 @@ func (e *AddMethodEvent) ToBuffer() int {
 	return toStructsBuffer
 }
 
-func (e *AddMethodEvent) Execute(buffer Buffer, errChan chan<- error) {
+func (e *AddMethodEvent) Execute(buffer busBuffer, errChan chan<- error) {
 	buf, ok := buffer.(*StructBuffer)
 	if !ok {
 		errChan <- fmt.Errorf("buffer is not of type *StructBuffer")

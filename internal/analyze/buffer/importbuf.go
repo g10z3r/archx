@@ -10,7 +10,7 @@ type ImportBuffer struct {
 	Imports map[string]string
 }
 
-func (buf *ImportBuffer) HandleEvent(event Event, errChan chan<- error) {
+func (buf *ImportBuffer) HandleEvent(event bufferEvent, errChan chan<- error) {
 	event.Execute(buf, errChan)
 }
 
