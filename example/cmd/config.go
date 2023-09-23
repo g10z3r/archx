@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/g10z3r/archx/example/internal/api"
 	api2 "github.com/g10z3r/archx/example/internal/data/api"
-	mt "github.com/g10z3r/archx/example/internal/metadata"
 )
 
 type Test struct {
@@ -13,7 +12,7 @@ type Test struct {
 }
 
 func (p *Person) AgeInc() *Person {
-	mt.MetadataSome()
+
 	p.Age = p.Age + 1
 
 	return p

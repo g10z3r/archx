@@ -3,7 +3,9 @@ package main
 import (
 	"os"
 
+	_ "github.com/g10z3r/archx/example/internal/api"
 	"github.com/g10z3r/archx/example/internal/data"
+	"github.com/g10z3r/archx/example/internal/metadata"
 )
 
 type Go interface {
@@ -54,7 +56,7 @@ func (p *Person) ChangeFirstName(newFirstName string) *Person {
 
 func (p *Person) ChangeLastName(newLastName string) *Person {
 	os.Getenv("TEST")
-
+	metadata.MetadataSome()
 	if newLastName != p.LastName {
 		p.LastName = newLastName
 	}
