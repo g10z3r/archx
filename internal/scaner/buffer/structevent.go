@@ -18,7 +18,7 @@ func (e *UpsertStructEvent) ToBuffer() int {
 func (e *UpsertStructEvent) Execute(buffer bufferBus, errChan chan<- error) {
 	buf, ok := buffer.(*StructBuffer)
 	if !ok {
-		errChan <- fmt.Errorf("buffer is not of type *StructBuffer")
+		errChan <- errIncorrectStructBufferType
 		return
 	}
 

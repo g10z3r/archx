@@ -3,6 +3,8 @@ package buffer
 import (
 	"fmt"
 	"sync"
+
+	"github.com/g10z3r/archx/pkg/bloom"
 )
 
 const (
@@ -65,13 +67,19 @@ func (mb *BufferEventBus) Stop() {
 	close(mb.stopChan)
 }
 
-func NewBufferEventBus(errChan chan error) *BufferEventBus {
+func NewBufferEventBus(mod string, impTotal int, errChan chan error) *BufferEventBus {
 	return &BufferEventBus{
 		StructBuffer: newStructBuffer(),
-		ImportBuffer: newImportBuffer(),
-		WaitGroup:    sync.WaitGroup{},
-		eventChan:    make(chan bufferEvent),
-		stopChan:     make(chan struct{}),
-		errChan:      errChan,
+		ImportBuffer: newImportBuffer(
+			mod,
+			bloom.FilterConfig{
+				ExpectedItemCount:        uint64(impTotal),
+				DesiredFalsePositiveRate: 0.01,
+			},
+		),
+		WaitGroup: sync.WaitGroup{},
+		eventChan: make(chan bufferEvent),
+		stopChan:  make(chan struct{}),
+		errChan:   errChan,
 	}
 }

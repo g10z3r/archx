@@ -25,7 +25,13 @@ func ScanPackage(dirPath string, mod string) (*buffer.BufferEventBus, error) {
 	}
 
 	for _, pkg := range pkgs {
-		buf = buffer.NewBufferEventBus(errChan)
+
+		var impTotal int
+		for _, file := range pkg.Files {
+			impTotal = impTotal + len(file.Imports)
+		}
+
+		buf = buffer.NewBufferEventBus(mod, impTotal, errChan)
 		go buf.Start()
 
 		for fileName, file := range pkg.Files {
@@ -35,7 +41,6 @@ func ScanPackage(dirPath string, mod string) (*buffer.BufferEventBus, error) {
 				if imp.Path != nil && imp.Path.Value != "" {
 					buf.SendEvent(&buffer.AddImportEvent{
 						Import: entity.NewImport(imp),
-						Mod:    mod,
 					})
 				}
 			}

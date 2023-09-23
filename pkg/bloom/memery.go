@@ -1,7 +1,6 @@
 package bloom
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -35,7 +34,7 @@ func (filter *memoryBloomFilter) MightContain(b []byte) (bool, error) {
 	return true, nil
 }
 
-func NewMemoryBloomFilter(size uint64) BloomFilter {
+func NewBloomFilter(size uint64) BloomFilter {
 	if size == 0 {
 		size = 10000
 	}
@@ -46,12 +45,17 @@ func NewMemoryBloomFilter(size uint64) BloomFilter {
 	}
 }
 
+type FilterConfig struct {
+	_                        [0]int
+	ExpectedItemCount        uint64
+	DesiredFalsePositiveRate float64
+}
+
 // Calculates the optimal size and number of hash functions
 // for a Bloom Filter given the expected number of items and the desired
 // false positive probability.
 func CalculateFilterParams(n uint64, p float64) (m uint64, k int) {
 	if n == 0 || p <= 0 || p >= 1 {
-		fmt.Println("Invalid parameters. Make sure 0 < p < 1 and n > 0.")
 		return 0, 0
 	}
 
