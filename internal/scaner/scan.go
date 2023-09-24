@@ -125,12 +125,15 @@ func processFuncDecl(buf *buffer.BufferEventBus, fs *token.FileSet, funcDecl *as
 	})
 
 	if isNew {
+		resultChan := make(chan int, 1)
 		buf.SendEvent(
 			&buffer.UpsertStructEvent{
 				StructInfo: sType,
 				StructName: parentStruct.Name,
+				ResultChan: resultChan,
 			},
 		)
+		structIndex = <-resultChan
 	}
 
 	buf.WaitGroup.Add(1)

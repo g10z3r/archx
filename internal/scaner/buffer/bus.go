@@ -58,6 +58,7 @@ func (buf *BufferEventBus) Start() {
 			}
 			buf.handleEvent(event)
 		case <-buf.stopChan:
+			close(buf.errChan)
 			return
 		}
 	}

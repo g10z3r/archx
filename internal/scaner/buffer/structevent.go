@@ -9,6 +9,7 @@ import (
 type UpsertStructEvent struct {
 	StructInfo *entity.StructInfo
 	StructName string
+	ResultChan chan int
 }
 
 func (e *UpsertStructEvent) ToBuffer() int {
@@ -25,24 +26,32 @@ func (e *UpsertStructEvent) Execute(buffer bufferBus, errChan chan<- error) {
 	buf.mutex.Lock()
 	defer buf.mutex.Unlock()
 
+	index := -1
+	if e.ResultChan != nil {
+		defer func() {
+			e.ResultChan <- index
+		}()
+	}
+
 	if existingIndex, exists := buf.StructsIndex[e.StructName]; exists {
 		existingStruct := buf.Structs[existingIndex]
 
-		if !existingStruct.Incompplete && !e.StructInfo.Incompplete {
+		if !existingStruct.Incomplete && !e.StructInfo.Incomplete {
 			existingStruct.SyncMethods(e.StructInfo)
 			buf.Structs[existingIndex] = existingStruct
+			index = existingIndex
 		}
 
-		if !existingStruct.Incompplete && e.StructInfo.Incompplete {
+		if !existingStruct.Incomplete && e.StructInfo.Incomplete {
 			e.StructInfo.SyncMethods(existingStruct)
 			buf.Structs[existingIndex] = e.StructInfo
+			index = existingIndex
 		}
 	} else {
 		buf.Structs = append(buf.Structs, e.StructInfo)
-		index := len(buf.Structs) - 1
+		index = len(buf.Structs) - 1
 		buf.StructsIndex[e.StructName] = index
 	}
-
 }
 
 type AddMethodEvent struct {
@@ -65,5 +74,6 @@ func (e *AddMethodEvent) Execute(buffer bufferBus, errChan chan<- error) {
 	buf.mutex.Lock()
 	defer buf.mutex.Unlock()
 
+	fmt.Println("+++++++++++", e.StructIndex)
 	buf.Structs[e.StructIndex].AddMethod(e.Method, e.MethodName)
 }
