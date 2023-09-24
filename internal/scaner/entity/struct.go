@@ -143,11 +143,12 @@ type StructInfo struct {
 	Methods      []*Method
 	MethodsIndex map[string]int
 
+	// dependencies
 	Deps     []*DependencyInfo
 	DepsTree *DepsRadixTree
 
-	Incompplete bool
-	isEmbedded  bool
+	Incomplete bool
+	isEmbedded bool
 }
 
 func (st *StructInfo) AddDependency(importPath, element string) {
@@ -193,7 +194,7 @@ func NewStructPreInit(name string) *StructInfo {
 		Deps:         []*DependencyInfo{},
 		DepsTree:     NewDepsRadixTree(),
 		isEmbedded:   NotEmbedded,
-		Incompplete:  onlyPreinitialized,
+		Incomplete:   onlyPreinitialized,
 	}
 }
 
@@ -216,7 +217,7 @@ func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*
 			Deps:         []*DependencyInfo{},
 			DepsTree:     NewDepsRadixTree(),
 			isEmbedded:   isEmbedded,
-			Incompplete:  true,
+			Incomplete:   true,
 		},
 		mapMetaData.usedPackages,
 		nil
