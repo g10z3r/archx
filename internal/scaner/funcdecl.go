@@ -57,9 +57,9 @@ func processMethod(buf *buffer.BufferEventBus, funcDecl *ast.FuncDecl, parentStr
 	return newMethod, structIndex
 }
 
-func getOrCreateStruct(buf *buffer.BufferEventBus, structName string) (*entity.StructInfo, int) {
+func getOrCreateStruct(buf *buffer.BufferEventBus, structName string) (*entity.Struct, int) {
 	var structIndex int
-	var sType *entity.StructInfo
+	var sType *entity.Struct
 
 	if !buf.StructBuffer.IsPresent(structName) {
 		sType = entity.NewStructPreInit(structName)
@@ -74,7 +74,7 @@ func getOrCreateStruct(buf *buffer.BufferEventBus, structName string) (*entity.S
 	return sType, structIndex
 }
 
-func notifyStructCreation(buf *buffer.BufferEventBus, sType *entity.StructInfo, structName string) {
+func notifyStructCreation(buf *buffer.BufferEventBus, sType *entity.Struct, structName string) {
 	buf.SendEvent(
 		&buffer.UpsertStructEvent{
 			StructInfo: sType,

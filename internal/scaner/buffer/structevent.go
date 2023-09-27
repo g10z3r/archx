@@ -8,7 +8,7 @@ import (
 )
 
 type UpsertStructEvent struct {
-	StructInfo *entity.StructInfo
+	StructInfo *entity.Struct
 	StructName string
 }
 

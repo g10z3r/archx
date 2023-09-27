@@ -15,7 +15,7 @@ func CalculateAbstractness(abstractEntities int, specificEntities int) float32 {
 	return float32(abstractEntities) / float32(abstractEntities+specificEntities)
 }
 
-func CalculateLCOM(s *entity.StructInfo) float32 {
+func CalculateLCOM(s *entity.Struct) float32 {
 	if s == nil || len(s.Methods) == 0 || len(s.Fields) == 0 {
 		return defaultLCOMValue
 	}
@@ -41,7 +41,7 @@ func CalculateLCOM(s *entity.StructInfo) float32 {
 	return defaultLCOMValue
 }
 
-func CalculateLCOM96B(s *entity.StructInfo) float32 {
+func CalculateLCOM96B(s *entity.Struct) float32 {
 	if s == nil || len(s.Methods) == 0 || len(s.Fields) == 0 {
 		return defaultLCOMValue
 	}

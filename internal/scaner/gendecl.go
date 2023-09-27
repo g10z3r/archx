@@ -35,7 +35,8 @@ func processGenDecl(buf *buffer.BufferEventBus, fs *token.FileSet, genDecl *ast.
 	}
 }
 
-func processStructType(buf *buffer.BufferEventBus, fs *token.FileSet, typeSpec *ast.TypeSpec, structType *ast.StructType) (*entity.StructInfo, error) {
+func processStructType(buf *buffer.BufferEventBus, fs *token.FileSet, typeSpec *ast.TypeSpec, structType *ast.StructType) (*entity.Struct, error) {
+
 	sType, usedPackages, err := entity.NewStructType(fs, structType, entity.NotEmbedded)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new struct type: %w", err)
@@ -50,15 +51,7 @@ func processStructType(buf *buffer.BufferEventBus, fs *token.FileSet, typeSpec *
 	return sType, nil
 }
 
-func updateDependencies(buf *buffer.BufferEventBus, sType *entity.StructInfo, usedPackages []entity.UsedPackage) {
-	for _, p := range usedPackages {
-		if importIndex, exists := buf.ImportBuffer.GetIndexByAlias(p.Alias); exists {
-			sType.AddDependency(importIndex, p.Element)
-		}
-	}
-}
-
-func notifyStructUpsert(buf *buffer.BufferEventBus, structName string, sType *entity.StructInfo) {
+func notifyStructUpsert(buf *buffer.BufferEventBus, structName string, sType *entity.Struct) {
 	buf.SendEvent(
 		&buffer.UpsertStructEvent{
 			StructInfo: sType,

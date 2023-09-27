@@ -15,22 +15,15 @@ const (
 	NotEmbedded = false
 
 	onlyPreinitialized = false
-
-	CustomTypeStruct = "struct"
 )
 
-type FieldInfo struct {
+type Field struct {
 	_        [0]int
 	pos      token.Pos
 	end      token.Pos
 	Type     string
-	Embedded *StructInfo
+	Embedded *Struct
 	IsPublic bool
-}
-
-type Usage struct {
-	Total int
-	Uniq  int
 }
 
 type Method struct {
@@ -49,37 +42,37 @@ func NewMethod(res *ast.FuncDecl) *Method {
 	}
 }
 
-type DependencyInfo struct {
+type Dependency struct {
 	ImportIndex int
 	Usage       int
 }
 
-type StructInfo struct {
+type Struct struct {
 	_     [0]int
 	Mutex sync.RWMutex
 
 	Pos token.Pos
 	End token.Pos
 
-	Fields      []*FieldInfo
+	Fields      []*Field
 	FieldsIndex map[string]int
 
 	Methods      []*Method
 	MethodsIndex map[string]int
 
-	Dependencies      []*DependencyInfo
+	Dependencies      []*Dependency
 	DependenciesIndex map[string]int
 
 	Incomplete bool
 	isEmbedded bool
 }
 
-func (s *StructInfo) AddDependency(importIndex int, element string) {
+func (s *Struct) AddDependency(importIndex int, element string) {
 	if index, exists := s.DependenciesIndex[element]; exists {
 		s.Dependencies[index].ImportIndex = importIndex
 		s.Dependencies[index].Usage++
 	} else {
-		dep := &DependencyInfo{
+		dep := &Dependency{
 			ImportIndex: importIndex,
 			Usage:       1,
 		}
@@ -88,13 +81,13 @@ func (s *StructInfo) AddDependency(importIndex int, element string) {
 	}
 }
 
-func (s *StructInfo) AddMethod(metdod *Method, name string) {
+func (s *Struct) AddMethod(metdod *Method, name string) {
 
 	s.Methods = append(s.Methods, metdod)
 	s.MethodsIndex[name] = len(s.Methods) - 1
 }
 
-func (s *StructInfo) SyncMethods(from *StructInfo) {
+func (s *Struct) SyncMethods(from *Struct) {
 
 	for methodName, i := range from.MethodsIndex {
 		if _, exists := s.MethodsIndex[methodName]; !exists {
@@ -103,7 +96,7 @@ func (s *StructInfo) SyncMethods(from *StructInfo) {
 	}
 }
 
-func (s *StructInfo) SyncDependencies(from *StructInfo) {
+func (s *Struct) SyncDependencies(from *Struct) {
 
 	for element, i := range from.DependenciesIndex {
 		if _, exists := s.DependenciesIndex[element]; !exists {
@@ -114,38 +107,44 @@ func (s *StructInfo) SyncDependencies(from *StructInfo) {
 	}
 }
 
-func NewStructPreInit(name string) *StructInfo {
-	methods := []*Method{}
-	methodsIndex := make(map[string]int)
-
-	return &StructInfo{
-		Methods:           methods,
-		MethodsIndex:      methodsIndex,
-		Dependencies:      make([]*DependencyInfo, 0),
+func NewStructPreInit(name string) *Struct {
+	return &Struct{
+		Methods:           make([]*Method, 0),
+		MethodsIndex:      make(map[string]int),
+		Dependencies:      make([]*Dependency, 0),
 		DependenciesIndex: make(map[string]int),
 		isEmbedded:        NotEmbedded,
 		Incomplete:        onlyPreinitialized,
 	}
 }
 
-func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructInfo, []UsedPackage, error) {
+func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*Struct, []UsedPackage, error) {
 	mapMetaData, err := extractFieldMap(fset, res.Fields.List)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to extract field map: %w", err)
 	}
 
-	methods := []*Method{}
-	methodsIndex := make(map[string]int)
+	var methods []*Method
+	var methodsIndex map[string]int
+	var dependencies []*Dependency
+	var dependenciesIndex map[string]int
 
-	return &StructInfo{
+	if !isEmbedded {
+		methods = []*Method{}
+		methodsIndex = make(map[string]int)
+		dependencies = make([]*Dependency, 0, len(mapMetaData.usedPackages))
+		dependenciesIndex = make(map[string]int, len(mapMetaData.usedPackages))
+	}
+
+	return &Struct{
 			Pos:               res.Pos(),
 			End:               res.End(),
 			Fields:            mapMetaData.fieldsSet,
 			FieldsIndex:       mapMetaData.fieldsIndex,
 			Methods:           methods,
 			MethodsIndex:      methodsIndex,
-			Dependencies:      make([]*DependencyInfo, 0),
-			DependenciesIndex: make(map[string]int),
+			Dependencies:      dependencies,
+			DependenciesIndex: dependenciesIndex,
 			isEmbedded:        isEmbedded,
 			Incomplete:        true,
 		},
@@ -160,12 +159,12 @@ type UsedPackage struct {
 
 type fieldMapMetaData struct {
 	usedPackages []UsedPackage
-	fieldsSet    []*FieldInfo
+	fieldsSet    []*Field
 	fieldsIndex  map[string]int
 }
 
 func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMetaData, error) {
-	fields := make([]*FieldInfo, 0, len(fieldList))
+	fields := make([]*Field, 0, len(fieldList))
 	fieldsIndex := make(map[string]int, len(fieldList))
 	usedPackages := []UsedPackage{}
 
@@ -175,15 +174,13 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 			return nil, err
 		}
 
-		if fieldMetaData.isImported {
-			for i := 0; i < len(fieldMetaData.usedPackages); i++ {
-				usedPackages = append(usedPackages, fieldMetaData.usedPackages[i])
-			}
+		for i := 0; i < len(fieldMetaData.usedPackages); i++ {
+			usedPackages = append(usedPackages, fieldMetaData.usedPackages[i])
 		}
 
 		for _, name := range field.Names {
 			fieldsIndex[name.Name] = i
-			fields = append(fields, &FieldInfo{
+			fields = append(fields, &Field{
 				pos:      name.Pos(),
 				end:      name.End(),
 				Type:     fieldMetaData._type,
@@ -203,8 +200,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 type fieldTypeMetaData struct {
 	_type          string
 	usedPackages   []UsedPackage
-	isImported     bool
-	embeddedStruct *StructInfo
+	embeddedStruct *Struct
 }
 
 func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (*fieldTypeMetaData, error) {
@@ -216,7 +212,7 @@ func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (*fieldTypeMetaDa
 		}
 
 		return &fieldTypeMetaData{
-			_type:          CustomTypeStruct,
+			_type:          "struct",
 			usedPackages:   usedPackages,
 			embeddedStruct: embedded,
 		}, nil
@@ -226,7 +222,6 @@ func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (*fieldTypeMetaDa
 			return &fieldTypeMetaData{
 				_type:        ft.Sel.Name,
 				usedPackages: []UsedPackage{{Alias: ident.Name, Element: ft.Sel.Name}},
-				isImported:   true,
 			}, nil
 		}
 
