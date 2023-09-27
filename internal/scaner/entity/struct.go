@@ -75,8 +75,6 @@ type StructInfo struct {
 }
 
 func (s *StructInfo) AddDependency(importIndex int, element string) {
-	fmt.Println("$$$$ Call AddDependency", element)
-
 	if index, exists := s.DependenciesIndex[element]; exists {
 		s.Dependencies[index].ImportIndex = importIndex
 		s.Dependencies[index].Usage++
