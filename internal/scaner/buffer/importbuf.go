@@ -45,6 +45,14 @@ func (buf *ImportBuffer) IsPresent(key string) (string, bool) {
 	return buf.Imports[index], exists
 }
 
+func (buf *ImportBuffer) GetIndexByAlias(alias string) (int, bool) {
+	buf.mutex.Lock()
+	defer buf.mutex.Unlock()
+
+	index, exists := buf.ImportsIndex[alias]
+	return index, exists
+}
+
 func newImportBuffer(mod string, filterConfig bloom.FilterConfig) *ImportBuffer {
 	m, _ := bloom.CalculateFilterParams(
 		filterConfig.ExpectedItemCount,

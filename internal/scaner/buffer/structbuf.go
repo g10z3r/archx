@@ -7,7 +7,7 @@ import (
 )
 
 type StructBuffer struct {
-	mutex  sync.Mutex
+	mutex  sync.RWMutex
 	lenght int
 	size   int
 
@@ -57,7 +57,7 @@ func (buf *StructBuffer) GetIndex(name string) int {
 
 func newStructBuffer() *StructBuffer {
 	return &StructBuffer{
-		mutex:        sync.Mutex{},
+		mutex:        sync.RWMutex{},
 		Structs:      make([]*entity.StructInfo, 0),
 		StructsIndex: make(map[string]int),
 	}

@@ -49,7 +49,7 @@ func (buf *BufferEventBus) handleEvent(event bufferEvent) {
 	}
 }
 
-func (buf *BufferEventBus) Start() {
+func (buf *BufferEventBus) Open() {
 	for {
 		select {
 		case event, ok := <-buf.eventChan:
@@ -58,13 +58,13 @@ func (buf *BufferEventBus) Start() {
 			}
 			buf.handleEvent(event)
 		case <-buf.stopChan:
-			close(buf.errChan)
+			close(buf.eventChan)
 			return
 		}
 	}
 }
 
-func (mb *BufferEventBus) Stop() {
+func (mb *BufferEventBus) Close() {
 	close(mb.stopChan)
 }
 

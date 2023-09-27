@@ -5,22 +5,23 @@ import (
 
 	_ "github.com/g10z3r/archx/example/internal/api"
 	"github.com/g10z3r/archx/example/internal/data"
+	"github.com/g10z3r/archx/example/internal/data/api"
 	"github.com/g10z3r/archx/example/internal/metadata"
 )
 
-type Go interface {
-	Straight() error
-	Left() error
-	Right() error
-	Back() error
-}
+// type Go interface {
+// 	Straight() error
+// 	Left() error
+// 	Right() error
+// 	Back() error
+// }
 
-type Transport interface {
-	StartEngine() error
-	StopEngine() error
+// type Transport interface {
+// 	StartEngine() error
+// 	StopEngine() error
 
-	Go
-}
+// 	Go
+// }
 
 type Address struct {
 	street string
@@ -32,11 +33,13 @@ type Address struct {
 type Person struct {
 	FirstName,
 	LastName string
-	Age       int
-	Info      data.PersonalInfo
-	Address   Address
-	Transport Transport
-	Skill     struct {
+	Age     int
+	test    api.Api2
+	Info    data.PersonalInfo
+	Info2   data.PersonalInfo
+	Address Address
+	// Transport Transport
+	Skill struct {
 		Intelligence float32
 
 		Speed float32
@@ -60,6 +63,13 @@ func (p *Person) ChangeLastName(newLastName string) *Person {
 	if newLastName != p.LastName {
 		p.LastName = newLastName
 	}
+
+	return p
+}
+
+func (p *Person) AgeInc() *Person {
+
+	p.Age = p.Age + 1
 
 	return p
 }

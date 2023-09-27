@@ -6,7 +6,7 @@ import (
 	"go/ast"
 	"go/format"
 	"go/token"
-	"strings"
+	"sync"
 	"unicode"
 )
 
@@ -36,7 +36,7 @@ type Usage struct {
 type Method struct {
 	Start      token.Pos
 	End        token.Pos
-	UsedFields map[string]Usage
+	UsedFields map[string]int
 	IsPublic   bool
 }
 
@@ -44,96 +44,20 @@ func NewMethod(res *ast.FuncDecl) *Method {
 	return &Method{
 		Start:      res.Pos(),
 		End:        res.End(),
-		UsedFields: make(map[string]Usage),
+		UsedFields: make(map[string]int),
 		IsPublic:   unicode.IsUpper(rune(res.Name.Name[0])),
 	}
 }
 
 type DependencyInfo struct {
-	Element string
-	Usage   Usage
-}
-
-type DependencyNode struct {
-	Prefix   string
-	Children map[string]*DependencyNode
-	Index    int
-}
-
-type DepsRadixTree struct {
-	Root *DependencyNode
-}
-
-func NewDepsRadixTree() *DepsRadixTree {
-	tree := &DepsRadixTree{
-		Root: &DependencyNode{
-			Children: make(map[string]*DependencyNode),
-			Index:    -1,
-		},
-	}
-	return tree
-}
-
-func (t *DepsRadixTree) Insert(path string, index int) {
-	currentNode := t.Root
-	pathSegments := strings.Split(path, "/")
-
-	for _, segment := range pathSegments {
-		if segment == "" {
-			continue // Skip empty segments
-		}
-
-		if nextNode, ok := currentNode.Children[segment]; ok {
-			currentNode = nextNode
-		} else {
-			newNode := &DependencyNode{
-				Prefix:   segment,
-				Children: make(map[string]*DependencyNode),
-				Index:    index,
-			}
-			currentNode.Children[segment] = newNode
-			currentNode = newNode
-		}
-	}
-}
-
-func (t *DepsRadixTree) Find(path string) (bool, int) {
-	currentNode := t.Root
-	pathSegments := strings.Split(path, "/")
-
-	for _, segment := range pathSegments {
-		if segment == "" {
-			continue
-		}
-
-		if nextNode, ok := currentNode.Children[segment]; ok {
-			currentNode = nextNode
-		} else {
-			return false, -1
-		}
-	}
-	return true, currentNode.Index
-}
-
-func (t *DepsRadixTree) Compress() {
-	compress(t.Root)
-}
-
-func compress(node *DependencyNode) {
-	for prefix, child := range node.Children {
-		compress(child)
-
-		if len(child.Children) == 1 {
-			for childPrefix, grandChild := range child.Children {
-				node.Children[prefix+"/"+childPrefix] = grandChild
-				delete(node.Children, prefix)
-			}
-		}
-	}
+	ImportIndex int
+	Usage       int
 }
 
 type StructInfo struct {
-	_   [0]int
+	_     [0]int
+	Mutex sync.RWMutex
+
 	Pos token.Pos
 	End token.Pos
 
@@ -143,43 +67,51 @@ type StructInfo struct {
 	Methods      []*Method
 	MethodsIndex map[string]int
 
-	// dependencies
-	Deps     []*DependencyInfo
-	DepsTree *DepsRadixTree
+	Dependencies      []*DependencyInfo
+	DependenciesIndex map[string]int
 
 	Incomplete bool
 	isEmbedded bool
 }
 
-func (st *StructInfo) AddDependency(importPath, element string) {
-	exists, index := st.DepsTree.Find(importPath)
-	if !exists {
-		dependencyInfo := &DependencyInfo{
-			Element: element,
-			Usage:   Usage{Total: 1, Uniq: 1},
-		}
-		st.Deps = append(st.Deps, dependencyInfo)
-		st.DepsTree.Insert(importPath, len(st.Deps)-1)
+func (s *StructInfo) AddDependency(importIndex int, element string) {
+	fmt.Println("$$$$ Call AddDependency", element)
+
+	if index, exists := s.DependenciesIndex[element]; exists {
+		s.Dependencies[index].ImportIndex = importIndex
+		s.Dependencies[index].Usage++
 	} else {
-		st.Deps[index].Usage.Total++
-		if st.Deps[index].Element != element {
-			st.Deps[index].Usage.Uniq++
-			st.Deps[index].Element = element
+		dep := &DependencyInfo{
+			ImportIndex: importIndex,
+			Usage:       1,
+		}
+		s.Dependencies = append(s.Dependencies, dep)
+		s.DependenciesIndex[element] = len(s.Dependencies) - 1
+	}
+}
+
+func (s *StructInfo) AddMethod(metdod *Method, name string) {
+
+	s.Methods = append(s.Methods, metdod)
+	s.MethodsIndex[name] = len(s.Methods) - 1
+}
+
+func (s *StructInfo) SyncMethods(from *StructInfo) {
+
+	for methodName, i := range from.MethodsIndex {
+		if _, exists := s.MethodsIndex[methodName]; !exists {
+			s.AddMethod(from.Methods[i], methodName)
 		}
 	}
 }
 
-func (si *StructInfo) AddMethod(metdod *Method, name string) {
-	si.Methods = append(si.Methods, metdod)
-	si.MethodsIndex[name] = len(si.Methods) - 1
-}
+func (s *StructInfo) SyncDependencies(from *StructInfo) {
 
-func (si *StructInfo) SyncMethods(from *StructInfo) {
-	for methodName, i := range from.MethodsIndex {
-		if _, exists := si.MethodsIndex[methodName]; !exists {
-			fmt.Println(from.MethodsIndex)
-			fmt.Println(si.MethodsIndex)
-			si.AddMethod(from.Methods[i], methodName)
+	for element, i := range from.DependenciesIndex {
+		if _, exists := s.DependenciesIndex[element]; !exists {
+			s.AddDependency(from.Dependencies[i].ImportIndex, element)
+		} else {
+			s.Dependencies[s.DependenciesIndex[element]].Usage += from.Dependencies[i].Usage
 		}
 	}
 }
@@ -189,16 +121,16 @@ func NewStructPreInit(name string) *StructInfo {
 	methodsIndex := make(map[string]int)
 
 	return &StructInfo{
-		Methods:      methods,
-		MethodsIndex: methodsIndex,
-		Deps:         []*DependencyInfo{},
-		DepsTree:     NewDepsRadixTree(),
-		isEmbedded:   NotEmbedded,
-		Incomplete:   onlyPreinitialized,
+		Methods:           methods,
+		MethodsIndex:      methodsIndex,
+		Dependencies:      make([]*DependencyInfo, 0),
+		DependenciesIndex: make(map[string]int),
+		isEmbedded:        NotEmbedded,
+		Incomplete:        onlyPreinitialized,
 	}
 }
 
-func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructInfo, []usedPackage, error) {
+func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructInfo, []UsedPackage, error) {
 	mapMetaData, err := extractFieldMap(fset, res.Fields.List)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to extract field map: %w", err)
@@ -208,28 +140,28 @@ func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*
 	methodsIndex := make(map[string]int)
 
 	return &StructInfo{
-			Pos:          res.Pos(),
-			End:          res.End(),
-			Fields:       mapMetaData.fieldsSet,
-			FieldsIndex:  mapMetaData.fieldsIndex,
-			Methods:      methods,
-			MethodsIndex: methodsIndex,
-			Deps:         []*DependencyInfo{},
-			DepsTree:     NewDepsRadixTree(),
-			isEmbedded:   isEmbedded,
-			Incomplete:   true,
+			Pos:               res.Pos(),
+			End:               res.End(),
+			Fields:            mapMetaData.fieldsSet,
+			FieldsIndex:       mapMetaData.fieldsIndex,
+			Methods:           methods,
+			MethodsIndex:      methodsIndex,
+			Dependencies:      make([]*DependencyInfo, 0),
+			DependenciesIndex: make(map[string]int),
+			isEmbedded:        isEmbedded,
+			Incomplete:        true,
 		},
 		mapMetaData.usedPackages,
 		nil
 }
 
-type usedPackage struct {
+type UsedPackage struct {
 	_              [0]int
 	Alias, Element string
 }
 
 type fieldMapMetaData struct {
-	usedPackages []usedPackage
+	usedPackages []UsedPackage
 	fieldsSet    []*FieldInfo
 	fieldsIndex  map[string]int
 }
@@ -237,7 +169,7 @@ type fieldMapMetaData struct {
 func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMetaData, error) {
 	fields := make([]*FieldInfo, 0, len(fieldList))
 	fieldsIndex := make(map[string]int, len(fieldList))
-	usedPackages := []usedPackage{}
+	usedPackages := []UsedPackage{}
 
 	for i, field := range fieldList {
 		fieldMetaData, err := extractFieldType(fset, field.Type)
@@ -272,7 +204,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 
 type fieldTypeMetaData struct {
 	_type          string
-	usedPackages   []usedPackage
+	usedPackages   []UsedPackage
 	isImported     bool
 	embeddedStruct *StructInfo
 }
@@ -295,7 +227,7 @@ func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (*fieldTypeMetaDa
 		if ident, ok := ft.X.(*ast.Ident); ok {
 			return &fieldTypeMetaData{
 				_type:        ft.Sel.Name,
-				usedPackages: []usedPackage{{Alias: ident.Name, Element: ft.Sel.Name}},
+				usedPackages: []UsedPackage{{Alias: ident.Name, Element: ft.Sel.Name}},
 				isImported:   true,
 			}, nil
 		}
