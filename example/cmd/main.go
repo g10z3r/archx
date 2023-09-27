@@ -35,14 +35,13 @@ type Person struct {
 	LastName string
 	Age     int
 	test    api.Api2
-	Info    data.PersonalInfo
-	Info2   data.PersonalInfo
 	Address Address
+	Info    data.PersonalInfo
 	// Transport Transport
 	Skill struct {
 		Intelligence float32
-
-		Speed float32
+		Info2        data.PersonalInfo
+		Speed        float32
 	}
 }
 
