@@ -23,8 +23,8 @@ func ScanPackage(dirPath string, mod string) (*buffer.BufferEventBus, error) {
 	}
 
 	for _, pkg := range pkgs {
-		impTotal := countTotalImports(pkg.Files)
-		buf = buffer.NewBufferEventBus(mod, impTotal, errChan)
+		imports, total := processImports(pkg.Files)
+		buf = buffer.NewBufferEventBus(mod, total, errChan)
 
 		var wg sync.WaitGroup
 		wg.Add(1)
@@ -33,7 +33,9 @@ func ScanPackage(dirPath string, mod string) (*buffer.BufferEventBus, error) {
 			buf.Open()
 		}()
 
-		processImports(buf, pkg.Files)
+		for i := 0; i < len(imports); i++ {
+			buf.SendEvent(&buffer.AddImportEvent{Import: imports[i]})
+		}
 
 		for fileName, file := range pkg.Files {
 			log.Printf("Processing file: %s", fileName)
@@ -61,23 +63,19 @@ func ScanPackage(dirPath string, mod string) (*buffer.BufferEventBus, error) {
 	return buf, nil
 }
 
-func processImports(buf *buffer.BufferEventBus, files map[string]*ast.File) {
+func processImports(files map[string]*ast.File) ([]*entity.Import, int) {
+	var impTotal int
+	var imports []*entity.Import
+
 	for _, file := range files {
+		impTotal = impTotal + len(file.Imports)
+
 		for _, imp := range file.Imports {
 			if imp.Path != nil && imp.Path.Value != "" {
-				buf.SendEvent(&buffer.AddImportEvent{
-					Import: entity.NewImport(imp),
-				})
+				imports = append(imports, entity.NewImport(imp))
 			}
 		}
 	}
-}
 
-func countTotalImports(files map[string]*ast.File) int {
-	var impTotal int
-	for _, file := range files {
-		impTotal = impTotal + len(file.Imports)
-	}
-
-	return impTotal
+	return imports, impTotal
 }
