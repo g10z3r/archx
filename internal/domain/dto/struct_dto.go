@@ -17,25 +17,28 @@ const (
 )
 
 type FieldDTO struct {
-	_        [0]int
-	pos      token.Pos
-	end      token.Pos
+	_ [0]int
+
+	start token.Pos
+	end   token.Pos
+
 	Type     string
 	Embedded *StructDTO
 	IsPublic bool
 }
 
 type MethodDTO struct {
-	Start      token.Pos
-	End        token.Pos
+	start token.Pos
+	end   token.Pos
+
 	UsedFields map[string]int
 	IsPublic   bool
 }
 
 func NewMethodDTO(res *ast.FuncDecl) *MethodDTO {
 	return &MethodDTO{
-		Start:      res.Pos(),
-		End:        res.End(),
+		start:      res.Pos(),
+		end:        res.End(),
 		UsedFields: make(map[string]int),
 		IsPublic:   unicode.IsUpper(rune(res.Name.Name[0])),
 	}
@@ -51,8 +54,8 @@ type StructDTO struct {
 
 	Name *string
 
-	Pos token.Pos
-	End token.Pos
+	start token.Pos
+	end   token.Pos
 
 	Fields      []*FieldDTO
 	FieldsIndex map[string]int
@@ -63,8 +66,8 @@ type StructDTO struct {
 	Dependencies      []*DependencyDTO
 	DependenciesIndex map[string]int
 
-	Incomplete bool
-	IsEmbedded bool
+	isIncompleted bool
+	isEmbedded    bool
 }
 
 func (s *StructDTO) AddDependency(importIndex int, element string) {
@@ -106,16 +109,16 @@ func NewStructDTO(fset *token.FileSet, res *ast.StructType, isEmbedded bool, nam
 
 	return &StructDTO{
 			Name:              name,
-			Pos:               res.Pos(),
-			End:               res.End(),
+			start:             res.Pos(),
+			end:               res.End(),
 			Fields:            mapMetaData.fieldsSet,
 			FieldsIndex:       mapMetaData.fieldsIndex,
 			Methods:           methods,
 			MethodsIndex:      methodsIndex,
 			Dependencies:      dependencies,
 			DependenciesIndex: dependenciesIndex,
-			IsEmbedded:        isEmbedded,
-			Incomplete:        true,
+			isEmbedded:        isEmbedded,
+			isIncompleted:     true,
 		},
 		mapMetaData.usedPackages,
 		nil
@@ -150,7 +153,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 		for _, name := range field.Names {
 			fieldsIndex[name.Name] = i
 			fields = append(fields, &FieldDTO{
-				pos:      name.Pos(),
+				start:    name.Pos(),
 				end:      name.End(),
 				Type:     fieldMetaData._type,
 				Embedded: fieldMetaData.embeddedStruct,
