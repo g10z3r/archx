@@ -2,8 +2,6 @@ package scanner
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -19,6 +17,19 @@ type scannerCache interface {
 	AddPackage(pkgPath string, index int)
 	GetPackageIndex(pkgName string) int
 	PackagesIndexLen() int
+}
+
+type packageCache interface {
+	ImportsLen() int
+	CheckImport(b []byte) (bool, error)
+	CheckSideEffectImport(b []byte) (bool, error)
+	AddSideEffectImport(_import *domainDTO.ImportDTO)
+	AddImport(_import *domainDTO.ImportDTO, index int)
+	AddImportIndex(_import *domainDTO.ImportDTO, index int)
+	GetImportIndex(importAlias string) int
+	GetImports() []string
+
+	Debug()
 }
 
 type ScanService struct {
@@ -45,77 +56,96 @@ func (s *ScanService) Perform(ctx context.Context, dirPath string, basePath stri
 	}
 
 	for _, pkg := range pkgs {
-		newPkg := domainDTO.NewPackageDTO(dirPath, pkg.Name)
-		if err := s.db.PackageRepo().Append(ctx, newPkg, s.cache.PackagesIndexLen()); err != nil {
+		newPkg, err := s.registerNewPackage(ctx, dirPath, pkg.Name)
+		if err != nil {
 			log.Fatal(err)
 		}
-		s.cache.AddPackage(newPkg.Path, s.cache.PackagesIndexLen())
 
-		pkgImports, total := processImports(pkg.Files)
+		pkgImports, total := fetchPackageImports(pkg.Files)
 		pkgCache := cache.NewPackageCache(bloom.FilterConfig{
 			ExpectedItemCount:        uint64(total),
 			DesiredFalsePositiveRate: 0.01,
 		})
 
 		for _, _import := range pkgImports {
-			_import.Trim(basePath)
-
-			if isSideEffectImport(_import) {
-				contains, err := pkgCache.CheckSideEffectImport([]byte(_import.Path))
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				if contains {
-					continue
-				}
-
-				if err := s.db.PackageRepo().ImportRepo().AppendSideEffectImport(ctx, _import, newPkg.Path); err != nil {
-					log.Fatal(err)
-				}
-
-				pkgCache.AddSideEffectImport(_import)
-				continue
+			pid := pkgImportData{
+				pkgCache: pkgCache,
+				newPkg:   newPkg,
+				basePath: basePath,
 			}
 
-			contains, err := pkgCache.CheckImport([]byte(_import.Path))
-			if err != nil {
+			if err := s.processPackageImport(ctx, pid, _import); err != nil {
 				log.Fatal(err)
 			}
-
-			if !contains {
-				if err := s.db.PackageRepo().ImportRepo().Append(ctx, _import, newPkg.Path); err != nil {
-					log.Fatal(err)
-				}
-
-				pkgCache.AddImport(_import, pkgCache.ImportsLen())
-				continue
-			}
-
-			if index := pkgCache.GetImportIndex(_import.Alias); index < 0 {
-				for i, imp := range pkgCache.Imports {
-					if imp == _import.Path {
-						pkgCache.AddImportIndex(_import, i)
-					}
-				}
-			}
 		}
 
-		jsonData, err := json.Marshal(pkgCache)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		fmt.Println(string(jsonData))
+		pkgCache.Debug()
 	}
 }
 
-func isSideEffectImport(_import *domainDTO.ImportDTO) bool {
-	return _import.WithAlias && _import.Alias == "_"
+func (s *ScanService) registerNewPackage(ctx context.Context, dirPath, pkgName string) (*domainDTO.PackageDTO, error) {
+	newPkg := domainDTO.NewPackageDTO(dirPath, pkgName)
+	if err := s.db.PackageRepo().Append(ctx, newPkg, s.cache.PackagesIndexLen()); err != nil {
+		return nil, err
+	}
+	s.cache.AddPackage(newPkg.Path, s.cache.PackagesIndexLen())
+
+	return newPkg, nil
 }
 
-func processImports(files map[string]*ast.File) ([]*domainDTO.ImportDTO, int) {
+type pkgImportData struct {
+	pkgCache packageCache
+	newPkg   *domainDTO.PackageDTO
+	basePath string
+}
+
+func (s *ScanService) processPackageImport(ctx context.Context, data pkgImportData, _import *domainDTO.ImportDTO) error {
+	_import.Trim(data.basePath)
+
+	if isSideEffectImport(_import) {
+		contains, err := data.pkgCache.CheckSideEffectImport([]byte(_import.Path))
+		if err != nil {
+			return err
+		}
+
+		if contains {
+			return nil
+		}
+
+		if err := s.db.PackageRepo().ImportRepo().AppendSideEffectImport(ctx, _import, data.newPkg.Path); err != nil {
+			return err
+		}
+
+		data.pkgCache.AddSideEffectImport(_import)
+		return nil
+	}
+
+	contains, err := data.pkgCache.CheckImport([]byte(_import.Path))
+	if err != nil {
+		return err
+	}
+
+	if !contains {
+		if err := s.db.PackageRepo().ImportRepo().Append(ctx, _import, data.newPkg.Path); err != nil {
+			return err
+		}
+
+		data.pkgCache.AddImport(_import, data.pkgCache.ImportsLen())
+		return nil
+	}
+
+	if index := data.pkgCache.GetImportIndex(_import.Alias); index < 0 {
+		for i, imp := range data.pkgCache.GetImports() {
+			if imp == _import.Path {
+				data.pkgCache.AddImportIndex(_import, i)
+			}
+		}
+	}
+
+	return nil
+}
+
+func fetchPackageImports(files map[string]*ast.File) ([]*domainDTO.ImportDTO, int) {
 	var impTotal int
 	var imports []*domainDTO.ImportDTO
 
@@ -130,4 +160,8 @@ func processImports(files map[string]*ast.File) ([]*domainDTO.ImportDTO, int) {
 	}
 
 	return imports, impTotal
+}
+
+func isSideEffectImport(_import *domainDTO.ImportDTO) bool {
+	return _import.WithAlias && _import.Alias == "_"
 }

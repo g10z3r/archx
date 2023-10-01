@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"encoding/json"
+	"log"
 	"path"
 	"sync"
 
@@ -17,6 +19,13 @@ type packageCache struct {
 
 	Imports      []string
 	ImportsIndex map[string]int
+}
+
+func (pc *packageCache) GetImports() []string {
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+
+	return pc.Imports
 }
 
 func (pc *packageCache) ImportsLen() int {
@@ -96,4 +105,9 @@ func NewPackageCache(cfg bloom.FilterConfig) *packageCache {
 		Imports:           make([]string, 0, cfg.ExpectedItemCount),
 		ImportsIndex:      make(map[string]int, cfg.ExpectedItemCount),
 	}
+}
+
+func (pc *packageCache) Debug() {
+	jsonData, _ := json.Marshal(pc)
+	log.Println(string(jsonData))
 }
