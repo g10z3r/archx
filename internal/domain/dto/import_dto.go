@@ -1,17 +1,17 @@
-package entity
+package dto
 
 import (
 	"go/ast"
 	"strings"
 )
 
-type Import struct {
+type ImportDTO struct {
 	Path      string
 	Alias     string
 	WithAlias bool
 }
 
-func NewImport(importSpec *ast.ImportSpec) *Import {
+func NewImport(importSpec *ast.ImportSpec) *ImportDTO {
 	var isWithAlias bool
 	var alias string
 
@@ -19,7 +19,7 @@ func NewImport(importSpec *ast.ImportSpec) *Import {
 		alias = importSpec.Name.Name
 		isWithAlias = true
 	}
-	return &Import{
+	return &ImportDTO{
 		Path:      strings.Trim(importSpec.Path.Value, `"`),
 		Alias:     alias,
 		WithAlias: isWithAlias,
