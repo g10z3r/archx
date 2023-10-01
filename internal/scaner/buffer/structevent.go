@@ -10,6 +10,7 @@ import (
 type UpsertStructEvent struct {
 	StructInfo *entity.Struct
 	StructName string
+	ResultChan chan int
 }
 
 func (e *UpsertStructEvent) ToBuffer() int {
@@ -23,13 +24,19 @@ func (e *UpsertStructEvent) Execute(buffer bufferBus, errChan chan<- error) {
 		return
 	}
 
-	buf.mutex.RLock()
-	defer buf.mutex.RUnlock()
+	buf.mutex.Lock()
+	defer buf.mutex.Unlock()
 
 	e.StructInfo.Mutex.Lock()
 	defer e.StructInfo.Mutex.Unlock()
 
 	var index int
+
+	defer func() {
+		if e.ResultChan != nil {
+			e.ResultChan <- index
+		}
+	}()
 
 	if existingIndex, exists := buf.StructsIndex[e.StructName]; exists {
 		existingStruct := buf.Structs[existingIndex]

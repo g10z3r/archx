@@ -18,12 +18,12 @@ const (
 )
 
 type Field struct {
-	_        [0]int
-	pos      token.Pos
-	end      token.Pos
-	Type     string
-	Embedded *Struct
-	IsPublic bool
+	_        [0]int    `bson:"-"`
+	pos      token.Pos `bson:"pos"`
+	end      token.Pos `bson:"end"`
+	Type     string    `bson:"type"`
+	Embedded *Struct   `bson:"embedded"`
+	IsPublic bool      `bson:"isPublic"`
 }
 
 type Method struct {
@@ -43,28 +43,28 @@ func NewMethod(res *ast.FuncDecl) *Method {
 }
 
 type Dependency struct {
-	ImportIndex int
-	Usage       int
+	ImportIndex int `bson:"importIndex"`
+	Usage       int `bson:"usage"`
 }
 
 type Struct struct {
-	_     [0]int
-	Mutex sync.RWMutex
+	_     [0]int       `bson:"-"`
+	Mutex sync.RWMutex `bson:"-"`
 
-	Pos token.Pos
-	End token.Pos
+	Pos token.Pos `bson:"pos"`
+	End token.Pos `bson:"end"`
 
-	Fields      []*Field
-	FieldsIndex map[string]int
+	Fields      []*Field       `bson:"fields"`
+	FieldsIndex map[string]int `bson:"fieldsIndex"`
 
-	Methods      []*Method
-	MethodsIndex map[string]int
+	Methods      []*Method      `bson:"methods"`
+	MethodsIndex map[string]int `bson:"methodsIndex"`
 
-	Dependencies      []*Dependency
-	DependenciesIndex map[string]int
+	Dependencies      []*Dependency  `bson:"dependencies"`
+	DependenciesIndex map[string]int `bson:"dependenciesIndex"`
 
-	Incomplete bool
-	isEmbedded bool
+	Incomplete bool `bson:"incomplete"`
+	IsEmbedded bool `bson:"isEmbedded"`
 }
 
 func (s *Struct) AddDependency(importIndex int, element string) {
@@ -113,7 +113,7 @@ func NewStructPreInit(name string) *Struct {
 		MethodsIndex:      make(map[string]int),
 		Dependencies:      make([]*Dependency, 0),
 		DependenciesIndex: make(map[string]int),
-		isEmbedded:        NotEmbedded,
+		IsEmbedded:        NotEmbedded,
 		Incomplete:        onlyPreinitialized,
 	}
 }
@@ -145,7 +145,7 @@ func NewStructType(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*
 			MethodsIndex:      methodsIndex,
 			Dependencies:      dependencies,
 			DependenciesIndex: dependenciesIndex,
-			isEmbedded:        isEmbedded,
+			IsEmbedded:        isEmbedded,
 			Incomplete:        true,
 		},
 		mapMetaData.usedPackages,

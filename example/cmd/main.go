@@ -1,12 +1,9 @@
 package main
 
 import (
-	"os"
-
 	_ "github.com/g10z3r/archx/example/internal/api"
 	"github.com/g10z3r/archx/example/internal/data"
 	"github.com/g10z3r/archx/example/internal/data/api"
-	"github.com/g10z3r/archx/example/internal/metadata"
 )
 
 // type Go interface {
@@ -45,30 +42,23 @@ type Person struct {
 	}
 }
 
-func (p *Person) ChangeFirstName(newFirstName string) *Person {
-	pi := data.PersonalInfo{}
-	pi.TestMethod()
+// func (p *Person) ChangeFirstName(newFirstName string) *Person {
+// 	pi := data.PersonalInfo{}
+// 	pi.TestMethod()
 
-	if newFirstName != p.FirstName {
-		p.FirstName = newFirstName
-	}
+// 	if newFirstName != p.FirstName {
+// 		p.FirstName = newFirstName
+// 	}
 
-	return p
-}
+// 	return p
+// }
 
-func (p *Person) ChangeLastName(newLastName string) *Person {
-	os.Getenv("TEST")
-	metadata.MetadataSome()
-	if newLastName != p.LastName {
-		p.LastName = newLastName
-	}
+// func (p *Person) ChangeLastName(newLastName string) *Person {
+// 	os.Getenv("TEST")
+// 	metadata.MetadataSome()
+// 	if newLastName != p.LastName {
+// 		p.LastName = newLastName
+// 	}
 
-	return p
-}
-
-func (p *Person) AgeInc() *Person {
-
-	p.Age = p.Age + 1
-
-	return p
-}
+// 	return p
+// }
