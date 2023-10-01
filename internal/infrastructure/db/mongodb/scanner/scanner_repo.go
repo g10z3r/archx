@@ -21,7 +21,11 @@ func NewScanResultRepository(col *mongo.Collection) repository.ScannerRepository
 	return &scanResultRepository{collection: col}
 }
 
-func (r *scanResultRepository) Create(ctx context.Context, result *domainDTO.ScanResultDTO) error {
+func (r *scanResultRepository) PackageRepo() repository.PackageRepository {
+	return r.packageRepo
+}
+
+func (r *scanResultRepository) Register(ctx context.Context, result *domainDTO.ScanResultDTO) error {
 	insertResult, err := r.collection.InsertOne(ctx, mongodbScanDAO.MapScanResultDTO(result))
 	if err != nil {
 		return err
@@ -31,8 +35,4 @@ func (r *scanResultRepository) Create(ctx context.Context, result *domainDTO.Sca
 	r.packageRepo = newPackageRepository(r.documentID, r.collection)
 
 	return nil
-}
-
-func (r *scanResultRepository) PackageRepo() repository.PackageRepository {
-	return r.packageRepo
 }

@@ -49,6 +49,8 @@ type DependencyDTO struct {
 type StructDTO struct {
 	_ [0]int
 
+	Name *string
+
 	Pos token.Pos
 	End token.Pos
 
@@ -84,7 +86,7 @@ func (s *StructDTO) AddMethod(metdod *MethodDTO, name string) {
 	s.MethodsIndex[name] = len(s.Methods) - 1
 }
 
-func NewStructDTO(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*StructDTO, []UsedPackage, error) {
+func NewStructDTO(fset *token.FileSet, res *ast.StructType, isEmbedded bool, name *string) (*StructDTO, []UsedPackage, error) {
 	mapMetaData, err := extractFieldMap(fset, res.Fields.List)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to extract field map: %w", err)
@@ -103,6 +105,7 @@ func NewStructDTO(fset *token.FileSet, res *ast.StructType, isEmbedded bool) (*S
 	}
 
 	return &StructDTO{
+			Name:              name,
 			Pos:               res.Pos(),
 			End:               res.End(),
 			Fields:            mapMetaData.fieldsSet,
@@ -172,7 +175,7 @@ type fieldTypeMetaData struct {
 func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (*fieldTypeMetaData, error) {
 	switch ft := fieldType.(type) {
 	case *ast.StructType:
-		embedded, usedPackages, err := NewStructDTO(fset, ft, true)
+		embedded, usedPackages, err := NewStructDTO(fset, ft, true, nil)
 		if err != nil {
 			return nil, err
 		}

@@ -18,6 +18,7 @@ type packageRepository struct {
 	collection *mongo.Collection
 
 	importRepo repository.ImportRepository
+	structRepo repository.StructRepository
 }
 
 func newPackageRepository(docID primitive.ObjectID, col *mongo.Collection) *packageRepository {
@@ -26,11 +27,16 @@ func newPackageRepository(docID primitive.ObjectID, col *mongo.Collection) *pack
 		collection: col,
 
 		importRepo: newImportRepository(docID, col),
+		structRepo: newStructRepository(docID, col),
 	}
 }
 
 func (r *packageRepository) ImportRepo() repository.ImportRepository {
 	return r.importRepo
+}
+
+func (r *packageRepository) StructRepo() repository.StructRepository {
+	return r.structRepo
 }
 
 func (r *packageRepository) Append(ctx context.Context, newPackage *domainDTO.PackageDTO, packageIndex int) error {
@@ -48,7 +54,7 @@ func (r *packageRepository) Append(ctx context.Context, newPackage *domainDTO.Pa
 		}},
 	}
 
-	_, err := r.collection.UpdateOne(context.Background(), filter, update)
+	_, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}

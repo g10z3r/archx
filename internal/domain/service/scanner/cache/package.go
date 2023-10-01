@@ -19,6 +19,8 @@ type packageCache struct {
 
 	Imports      []string
 	ImportsIndex map[string]int
+
+	StructsIndex map[string]int
 }
 
 func (pc *packageCache) GetImports() []string {
@@ -33,6 +35,32 @@ func (pc *packageCache) ImportsLen() int {
 	defer pc.mu.RUnlock()
 
 	return len(pc.Imports)
+}
+
+func (pc *packageCache) StructsIndexLen() int {
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+
+	return len(pc.StructsIndex)
+}
+
+func (pc *packageCache) AddStructIndex(structName string) {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+
+	pc.StructsIndex[structName] = len(pc.StructsIndex)
+}
+
+func (pc *packageCache) GetStructIndex(structName string) int {
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+
+	index, exists := pc.StructsIndex[structName]
+	if !exists {
+		return -1
+	}
+
+	return index
 }
 
 func (pc *packageCache) CheckImport(b []byte) (bool, error) {
@@ -104,6 +132,7 @@ func NewPackageCache(cfg bloom.FilterConfig) *packageCache {
 		sideEffectImports: bloom.NewBloomFilter(m),
 		Imports:           make([]string, 0, cfg.ExpectedItemCount),
 		ImportsIndex:      make(map[string]int, cfg.ExpectedItemCount),
+		StructsIndex:      make(map[string]int),
 	}
 }
 

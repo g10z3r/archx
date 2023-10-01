@@ -7,6 +7,6 @@ import (
 )
 
 type ScannerRepository interface {
-	Create(ctx context.Context, result *domainDTO.ScanResultDTO) error
+	Register(ctx context.Context, result *domainDTO.ScanResultDTO) error
 	PackageRepo() PackageRepository
 }

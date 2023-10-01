@@ -38,7 +38,7 @@ func (r *importRepository) Append(ctx context.Context, _import *domainDTO.Import
 		Filters: []interface{}{bson.D{{Key: "pkg.path", Value: packagePath}}},
 	})
 
-	_, err := r.collection.UpdateOne(context.Background(), filter, update, arrayFilters)
+	_, err := r.collection.UpdateOne(ctx, filter, update, arrayFilters)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (r *importRepository) AppendSideEffectImport(ctx context.Context, _import *
 		Filters: []interface{}{bson.D{{Key: "pkg.path", Value: packagePath}}},
 	})
 
-	_, err := r.collection.UpdateOne(context.Background(), filter, update, arrayFilters)
+	_, err := r.collection.UpdateOne(ctx, filter, update, arrayFilters)
 	if err != nil {
 		return err
 	}
