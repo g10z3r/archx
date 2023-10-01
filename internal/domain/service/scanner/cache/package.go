@@ -1,4 +1,4 @@
-package scanner
+package cache
 
 import (
 	"path"
@@ -9,38 +9,6 @@ import (
 	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
 )
 
-type scannerCache struct {
-	mu sync.RWMutex
-
-	packagesIndex map[string]int
-}
-
-func (sc *scannerCache) AddPackage(pkgPath string, index int) {
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-
-	sc.packagesIndex[pkgPath] = index
-}
-
-func (sc *scannerCache) GetPackageIndex(pkgName string) int {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
-
-	index, exists := sc.packagesIndex[pkgName]
-	if !exists {
-		return -1
-	}
-
-	return index
-}
-
-func newScannerCache() *scannerCache {
-	return &scannerCache{
-		mu:            sync.RWMutex{},
-		packagesIndex: make(map[string]int),
-	}
-}
-
 type packageCache struct {
 	mu sync.RWMutex
 
@@ -49,6 +17,27 @@ type packageCache struct {
 
 	Imports      []string
 	ImportsIndex map[string]int
+}
+
+func (pc *packageCache) ImportsLen() int {
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+
+	return len(pc.Imports)
+}
+
+func (pc *packageCache) CheckImport(b []byte) (bool, error) {
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+
+	return pc.importsFilter.MightContain(b)
+}
+
+func (pc *packageCache) CheckSideEffectImport(b []byte) (bool, error) {
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+
+	return pc.sideEffectImports.MightContain(b)
 }
 
 func (pc *packageCache) AddSideEffectImport(_import *domainDTO.ImportDTO) {
@@ -94,7 +83,7 @@ func (pc *packageCache) GetImportIndex(importAlias string) int {
 	return index
 }
 
-func newPackageCache(cfg bloom.FilterConfig) *packageCache {
+func NewPackageCache(cfg bloom.FilterConfig) *packageCache {
 	m, _ := bloom.CalculateFilterParams(
 		cfg.ExpectedItemCount,
 		float64(cfg.DesiredFalsePositiveRate),

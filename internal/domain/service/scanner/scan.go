@@ -11,17 +11,24 @@ import (
 
 	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
 	"github.com/g10z3r/archx/internal/domain/repository"
+	"github.com/g10z3r/archx/internal/domain/service/scanner/cache"
 	"github.com/g10z3r/archx/pkg/bloom"
 )
 
+type scannerCache interface {
+	AddPackage(pkgPath string, index int)
+	GetPackageIndex(pkgName string) int
+	PackagesIndexLen() int
+}
+
 type ScanService struct {
-	cache *scannerCache
+	cache scannerCache
 	db    repository.ScannerRepository
 }
 
 func NewScanService(scanRepo repository.ScannerRepository) *ScanService {
 	return &ScanService{
-		cache: newScannerCache(),
+		cache: cache.NewScannerCache(),
 		db:    scanRepo,
 	}
 }
@@ -39,13 +46,13 @@ func (s *ScanService) Perform(ctx context.Context, dirPath string, basePath stri
 
 	for _, pkg := range pkgs {
 		newPkg := domainDTO.NewPackageDTO(dirPath, pkg.Name)
-		if err := s.db.PackageRepo().Append(ctx, newPkg, len(s.cache.packagesIndex)); err != nil {
+		if err := s.db.PackageRepo().Append(ctx, newPkg, s.cache.PackagesIndexLen()); err != nil {
 			log.Fatal(err)
 		}
-		s.cache.AddPackage(newPkg.Path, len(s.cache.packagesIndex))
+		s.cache.AddPackage(newPkg.Path, s.cache.PackagesIndexLen())
 
 		pkgImports, total := processImports(pkg.Files)
-		pkgCache := newPackageCache(bloom.FilterConfig{
+		pkgCache := cache.NewPackageCache(bloom.FilterConfig{
 			ExpectedItemCount:        uint64(total),
 			DesiredFalsePositiveRate: 0.01,
 		})
@@ -54,7 +61,7 @@ func (s *ScanService) Perform(ctx context.Context, dirPath string, basePath stri
 			_import.Trim(basePath)
 
 			if isSideEffectImport(_import) {
-				contains, err := pkgCache.sideEffectImports.MightContain([]byte(_import.Path))
+				contains, err := pkgCache.CheckSideEffectImport([]byte(_import.Path))
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -71,7 +78,7 @@ func (s *ScanService) Perform(ctx context.Context, dirPath string, basePath stri
 				continue
 			}
 
-			contains, err := pkgCache.importsFilter.MightContain([]byte(_import.Path))
+			contains, err := pkgCache.CheckImport([]byte(_import.Path))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -81,7 +88,7 @@ func (s *ScanService) Perform(ctx context.Context, dirPath string, basePath stri
 					log.Fatal(err)
 				}
 
-				pkgCache.AddImport(_import, len(pkgCache.ImportsIndex))
+				pkgCache.AddImport(_import, pkgCache.ImportsLen())
 				continue
 			}
 
