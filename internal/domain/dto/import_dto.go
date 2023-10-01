@@ -11,7 +11,15 @@ type ImportDTO struct {
 	WithAlias bool
 }
 
-func NewImport(importSpec *ast.ImportSpec) *ImportDTO {
+func (dto *ImportDTO) Trim(basePath string) {
+	if !strings.HasSuffix(basePath, "/") {
+		basePath += "/"
+	}
+
+	dto.Path = "/" + strings.TrimPrefix(dto.Path, basePath)
+}
+
+func NewImportDTO(importSpec *ast.ImportSpec) *ImportDTO {
 	var isWithAlias bool
 	var alias string
 

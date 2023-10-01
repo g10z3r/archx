@@ -2,13 +2,16 @@ package scanner
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"log"
-	"time"
 
 	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
 	"github.com/g10z3r/archx/internal/domain/repository"
+	"github.com/g10z3r/archx/pkg/bloom"
 )
 
 type ScanService struct {
@@ -23,11 +26,8 @@ func NewScanService(scanRepo repository.ScannerRepository) *ScanService {
 	}
 }
 
-func (s *ScanService) Perform(ctx context.Context, dirPath string, mod string) {
-	scanResult := domainDTO.ScannerResultDTO{
-		Timestamp: time.Now().Unix(),
-	}
-	if err := s.db.Create(ctx, &scanResult); err != nil {
+func (s *ScanService) Perform(ctx context.Context, dirPath string, basePath string) {
+	if err := s.db.Create(ctx, domainDTO.NewScanResultDTO(basePath)); err != nil {
 		log.Fatal(err)
 	}
 
@@ -38,15 +38,89 @@ func (s *ScanService) Perform(ctx context.Context, dirPath string, mod string) {
 	}
 
 	for _, pkg := range pkgs {
-		newPkg := domainDTO.PackageDTO{
-			Path: dirPath,
-			Name: pkg.Name,
-		}
-
-		err := s.db.PackageRepo().Create(ctx, &newPkg, len(s.cache.packagesIndex))
-		if err != nil {
+		newPkg := domainDTO.NewPackageDTO(dirPath, pkg.Name)
+		if err := s.db.PackageRepo().Append(ctx, newPkg, len(s.cache.packagesIndex)); err != nil {
 			log.Fatal(err)
 		}
+		s.cache.AddPackage(newPkg.Path, len(s.cache.packagesIndex))
 
+		pkgImports, total := processImports(pkg.Files)
+		pkgCache := newPackageCache(bloom.FilterConfig{
+			ExpectedItemCount:        uint64(total),
+			DesiredFalsePositiveRate: 0.01,
+		})
+
+		for _, _import := range pkgImports {
+			_import.Trim(basePath)
+
+			if isSideEffectImport(_import) {
+				contains, err := pkgCache.sideEffectImports.MightContain([]byte(_import.Path))
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				if contains {
+					continue
+				}
+
+				if err := s.db.PackageRepo().ImportRepo().AppendSideEffectImport(ctx, _import, newPkg.Path); err != nil {
+					log.Fatal(err)
+				}
+
+				pkgCache.AddSideEffectImport(_import)
+				continue
+			}
+
+			contains, err := pkgCache.importsFilter.MightContain([]byte(_import.Path))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if !contains {
+				if err := s.db.PackageRepo().ImportRepo().Append(ctx, _import, newPkg.Path); err != nil {
+					log.Fatal(err)
+				}
+
+				pkgCache.AddImport(_import, len(pkgCache.ImportsIndex))
+				continue
+			}
+
+			if index := pkgCache.GetImportIndex(_import.Alias); index < 0 {
+				for i, imp := range pkgCache.Imports {
+					if imp == _import.Path {
+						pkgCache.AddImportIndex(_import, i)
+					}
+				}
+			}
+		}
+
+		jsonData, err := json.Marshal(pkgCache)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Println(string(jsonData))
 	}
+}
+
+func isSideEffectImport(_import *domainDTO.ImportDTO) bool {
+	return _import.WithAlias && _import.Alias == "_"
+}
+
+func processImports(files map[string]*ast.File) ([]*domainDTO.ImportDTO, int) {
+	var impTotal int
+	var imports []*domainDTO.ImportDTO
+
+	for _, file := range files {
+		impTotal = impTotal + len(file.Imports)
+
+		for _, imp := range file.Imports {
+			if imp.Path != nil && imp.Path.Value != "" {
+				imports = append(imports, domainDTO.NewImportDTO(imp))
+			}
+		}
+	}
+
+	return imports, impTotal
 }

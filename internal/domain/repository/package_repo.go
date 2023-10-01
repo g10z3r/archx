@@ -7,5 +7,7 @@ import (
 )
 
 type PackageRepository interface {
-	Create(ctx context.Context, pkg *domainDTO.PackageDTO, packageIndex int) error
+	Append(ctx context.Context, pkg *domainDTO.PackageDTO, packageIndex int) error
+
+	ImportRepo() ImportRepository
 }

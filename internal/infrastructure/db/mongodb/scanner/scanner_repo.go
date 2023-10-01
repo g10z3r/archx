@@ -2,14 +2,13 @@ package scanner
 
 import (
 	"context"
-	"time"
 
 	"github.com/g10z3r/archx/internal/domain/repository"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
-	mongoDBScanDAO "github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/dao"
+	mongodbScanDAO "github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/dao"
 )
 
 type scanResultRepository struct {
@@ -18,18 +17,12 @@ type scanResultRepository struct {
 	packageRepo repository.PackageRepository
 }
 
-func NewScanResultRepository(collection *mongo.Collection) repository.ScannerRepository {
-	return &scanResultRepository{collection: collection}
+func NewScanResultRepository(col *mongo.Collection) repository.ScannerRepository {
+	return &scanResultRepository{collection: col}
 }
 
-func (r *scanResultRepository) Create(ctx context.Context, result *domainDTO.ScannerResultDTO) error {
-	dao := mongoDBScanDAO.ScannerResultDAO{
-		Timestamp:     time.Now().Unix(),
-		Packages:      []mongoDBScanDAO.PackageDAO{},
-		PackagesIndex: make(map[string]int),
-	}
-
-	insertResult, err := r.collection.InsertOne(ctx, dao)
+func (r *scanResultRepository) Create(ctx context.Context, result *domainDTO.ScanResultDTO) error {
+	insertResult, err := r.collection.InsertOne(ctx, mongodbScanDAO.MapScanResultDTO(result))
 	if err != nil {
 		return err
 	}
