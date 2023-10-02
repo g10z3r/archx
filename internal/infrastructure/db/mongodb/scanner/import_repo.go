@@ -39,11 +39,7 @@ func (r *importRepository) Append(ctx context.Context, _import *entity.ImportEnt
 	})
 
 	_, err := r.collection.UpdateOne(ctx, filter, update, arrayFilters)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (r *importRepository) AppendSideEffectImport(ctx context.Context, _import *entity.ImportEntity, packagePath string) error {
@@ -62,9 +58,5 @@ func (r *importRepository) AppendSideEffectImport(ctx context.Context, _import *
 	})
 
 	_, err := r.collection.UpdateOne(ctx, filter, update, arrayFilters)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }

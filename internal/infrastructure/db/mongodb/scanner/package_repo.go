@@ -55,9 +55,5 @@ func (r *packageRepository) Append(ctx context.Context, newPackage *entity.Packa
 	}
 
 	_, err := r.collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }

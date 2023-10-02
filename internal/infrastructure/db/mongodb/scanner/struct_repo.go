@@ -51,9 +51,5 @@ func (r *structRepository) Append(ctx context.Context, structEntity *entity.Stru
 	}
 
 	_, err := r.collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
