@@ -140,7 +140,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 	fieldsIndex := make(map[string]int, len(fieldList))
 	usedPackages := []UsedPackage{}
 
-	for i, field := range fieldList {
+	for _, field := range fieldList {
 		fieldMetaData, err := extractFieldType(fset, field.Type)
 		if err != nil {
 			return nil, err
@@ -150,8 +150,17 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 			usedPackages = append(usedPackages, fieldMetaData.usedPackages[i])
 		}
 
+		if len(field.Names) == 0 {
+			fields = append(fields, &FieldEntity{
+				Type:     fieldMetaData._type,
+				Embedded: fieldMetaData.embeddedStruct,
+				IsPublic: false,
+			})
+			continue
+		}
+
 		for _, name := range field.Names {
-			fieldsIndex[name.Name] = i
+			fieldsIndex[name.Name] = len(fields)
 			fields = append(fields, &FieldEntity{
 				start:    name.Pos(),
 				end:      name.End(),

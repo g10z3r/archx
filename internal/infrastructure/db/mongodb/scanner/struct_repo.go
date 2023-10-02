@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -13,18 +14,24 @@ import (
 )
 
 type structRepository struct {
+	mu sync.Mutex
+
 	documentID primitive.ObjectID
 	collection *mongo.Collection
 }
 
 func newStructRepository(docID primitive.ObjectID, col *mongo.Collection) *structRepository {
 	return &structRepository{
+		mu:         sync.Mutex{},
 		documentID: docID,
 		collection: col,
 	}
 }
 
 func (r *structRepository) Append(ctx context.Context, structEntity *entity.StructEntity, structIndex int, pkgPath string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	filter := bson.D{
 		{Key: "_id", Value: r.documentID},
 		{Key: "packages.path", Value: pkgPath},

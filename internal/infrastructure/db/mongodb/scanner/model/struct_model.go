@@ -32,17 +32,17 @@ type StructDAO struct {
 }
 
 func MapStructEntity(e *entity.StructEntity) *StructDAO {
-	fields := make([]*FieldDAO, len(e.Fields))
+	fields := make([]*FieldDAO, 0, len(e.Fields))
 	for i := 0; i < len(e.Fields); i++ {
 		fields = append(fields, mapFieldEntity(e.Fields[i]))
 	}
 
-	methods := make([]*MethodDAO, len(e.Methods))
+	methods := make([]*MethodDAO, 0, len(e.Methods))
 	for i := 0; i < len(e.Methods); i++ {
 		methods = append(methods, mapMethodEntity(e.Methods[i]))
 	}
 
-	deps := make([]*DependencyDAO, len(e.Dependencies))
+	deps := make([]*DependencyDAO, 0, len(e.Dependencies))
 	for i := 0; i < len(e.Dependencies); i++ {
 		deps = append(deps, mapDependencyEntity(e.Dependencies[i]))
 	}

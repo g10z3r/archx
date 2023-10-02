@@ -21,10 +21,9 @@ import (
 // }
 
 type Address struct {
-	street string
-	city   string
-	state  string
-	zip    string
+	street, city string
+	state        string
+	zip          string
 }
 
 type Person struct {

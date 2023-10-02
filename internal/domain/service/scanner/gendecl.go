@@ -54,11 +54,11 @@ func (s *ScanService) processStructType(ctx context.Context, pkgCache packageCac
 	}
 
 	if index := pkgCache.GetStructIndex(params.structName); index < 0 {
-		if err := s.db.PackageRepo().StructRepo().Append(ctx, structEntity, pkgCache.StructsIndexLen(), params.pkgPath); err != nil {
+		indexInCache := pkgCache.AddStructIndex(params.structName)
+		if err := s.db.PackageRepo().StructRepo().Append(ctx, structEntity, indexInCache, params.pkgPath); err != nil {
 			return err
 		}
 
-		pkgCache.AddStructIndex(params.structName)
 		return nil
 	}
 

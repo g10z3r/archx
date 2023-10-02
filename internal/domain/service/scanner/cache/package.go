@@ -2,6 +2,7 @@ package cache
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"path"
 	"sync"
@@ -44,11 +45,14 @@ func (pc *packageCache) StructsIndexLen() int {
 	return len(pc.StructsIndex)
 }
 
-func (pc *packageCache) AddStructIndex(structName string) {
+func (pc *packageCache) AddStructIndex(structName string) int {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
 
-	pc.StructsIndex[structName] = len(pc.StructsIndex)
+	index := len(pc.StructsIndex)
+	fmt.Println(structName, index)
+	pc.StructsIndex[structName] = index
+	return index
 }
 
 func (pc *packageCache) GetStructIndex(structName string) int {

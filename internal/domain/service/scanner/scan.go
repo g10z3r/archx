@@ -32,7 +32,7 @@ type packageCache interface {
 	AddSideEffectImport(_import *entity.ImportEntity)
 
 	StructsIndexLen() int
-	AddStructIndex(structName string)
+	AddStructIndex(structName string) int
 	GetStructIndex(structName string) int
 
 	Debug()
