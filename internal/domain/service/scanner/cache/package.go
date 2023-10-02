@@ -31,20 +31,6 @@ func (pc *packageCache) GetImports() []string {
 	return pc.Imports
 }
 
-func (pc *packageCache) ImportsLen() int {
-	pc.mu.RLock()
-	defer pc.mu.RUnlock()
-
-	return len(pc.Imports)
-}
-
-func (pc *packageCache) StructsIndexLen() int {
-	pc.mu.RLock()
-	defer pc.mu.RUnlock()
-
-	return len(pc.StructsIndex)
-}
-
 func (pc *packageCache) AddStructIndex(structName string) int {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
@@ -88,13 +74,14 @@ func (pc *packageCache) AddSideEffectImport(_import *entity.ImportEntity) {
 	pc.sideEffectImports.Put([]byte(_import.Path))
 }
 
-func (pc *packageCache) AddImport(_import *entity.ImportEntity, index int) {
+func (pc *packageCache) AddImport(_import *entity.ImportEntity) {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
 
 	pc.importsFilter.Put([]byte(_import.Path))
+
 	pc.Imports = append(pc.Imports, _import.Path)
-	pc.ImportsIndex[getAlias(_import)] = index
+	pc.ImportsIndex[getAlias(_import)] = len(pc.Imports)
 }
 
 func (pc *packageCache) AddImportIndex(_import *entity.ImportEntity, index int) {

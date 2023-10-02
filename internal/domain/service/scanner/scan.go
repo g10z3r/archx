@@ -22,16 +22,14 @@ type scannerCache interface {
 }
 
 type packageCache interface {
-	ImportsLen() int
 	CheckImport(b []byte) (bool, error)
-	AddImport(_import *entity.ImportEntity, index int)
+	AddImport(_import *entity.ImportEntity)
 	AddImportIndex(_import *entity.ImportEntity, index int)
 	GetImportIndex(importAlias string) int
 	GetImports() []string
 	CheckSideEffectImport(b []byte) (bool, error)
 	AddSideEffectImport(_import *entity.ImportEntity)
 
-	StructsIndexLen() int
 	AddStructIndex(structName string) int
 	GetStructIndex(structName string) int
 
@@ -167,7 +165,7 @@ func (s *ScanService) processPackageImport(ctx context.Context, data pkgImportDa
 			return err
 		}
 
-		data.pkgCache.AddImport(_import, data.pkgCache.ImportsLen())
+		data.pkgCache.AddImport(_import)
 		return nil
 	}
 
