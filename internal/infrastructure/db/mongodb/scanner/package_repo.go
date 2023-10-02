@@ -9,8 +9,8 @@ import (
 
 	"github.com/g10z3r/archx/internal/domain/repository"
 
-	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
-	mongodbScanDAO "github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/dao"
+	"github.com/g10z3r/archx/internal/domain/entity"
+	"github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/model"
 )
 
 type packageRepository struct {
@@ -39,18 +39,18 @@ func (r *packageRepository) StructRepo() repository.StructRepository {
 	return r.structRepo
 }
 
-func (r *packageRepository) Append(ctx context.Context, newPackage *domainDTO.PackageDTO, packageIndex int) error {
+func (r *packageRepository) Append(ctx context.Context, newPackage *entity.PackageEntity, packageIndex int) error {
 	filter := bson.D{
 		{Key: "_id", Value: r.documentID},
 	}
 
 	update := bson.D{
 		{Key: "$push", Value: bson.D{
-			{Key: "packages", Value: mongodbScanDAO.MapPackageDTO(newPackage)},
+			{Key: "packages", Value: model.MapPackageEntity(newPackage)},
 		}},
 
 		{Key: "$set", Value: bson.D{
-			{Key: "packagesIndex." + newPackage.Name, Value: packageIndex},
+			{Key: "packagesIndex." + newPackage.Path, Value: packageIndex},
 		}},
 	}
 

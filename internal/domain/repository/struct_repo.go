@@ -3,9 +3,9 @@ package repository
 import (
 	"context"
 
-	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
+	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
 type StructRepository interface {
-	Append(ctx context.Context, structDTO *domainDTO.StructDTO, structIndex int, pkgPath string) error
+	Append(ctx context.Context, structEntity *entity.StructEntity, structIndex int, pkgPath string) error
 }

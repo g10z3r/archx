@@ -8,8 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
-	mongodbScanDAO "github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/dao"
+	"github.com/g10z3r/archx/internal/domain/entity"
+	"github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/model"
 )
 
 type structRepository struct {
@@ -24,7 +24,7 @@ func newStructRepository(docID primitive.ObjectID, col *mongo.Collection) *struc
 	}
 }
 
-func (r *structRepository) Append(ctx context.Context, structDTO *domainDTO.StructDTO, structIndex int, pkgPath string) error {
+func (r *structRepository) Append(ctx context.Context, structEntity *entity.StructEntity, structIndex int, pkgPath string) error {
 	filter := bson.D{
 		{Key: "_id", Value: r.documentID},
 		{Key: "packages.path", Value: pkgPath},
@@ -33,12 +33,12 @@ func (r *structRepository) Append(ctx context.Context, structDTO *domainDTO.Stru
 	update := bson.D{
 		{
 			Key: "$push", Value: bson.D{
-				{Key: "packages.$.structs", Value: mongodbScanDAO.MapStructDTO(structDTO)},
+				{Key: "packages.$.structs", Value: model.MapStructEntity(structEntity)},
 			},
 		},
 		{
 			Key: "$set", Value: bson.D{
-				{Key: fmt.Sprintf("packages.$.structsIndex.%s", *structDTO.Name), Value: structIndex},
+				{Key: fmt.Sprintf("packages.$.structsIndex.%s", *structEntity.Name), Value: structIndex},
 			},
 		},
 	}

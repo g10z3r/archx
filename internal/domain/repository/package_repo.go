@@ -3,11 +3,11 @@ package repository
 import (
 	"context"
 
-	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
+	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
 type PackageRepository interface {
-	Append(ctx context.Context, pkg *domainDTO.PackageDTO, packageIndex int) error
+	Append(ctx context.Context, pkg *entity.PackageEntity, packageIndex int) error
 
 	StructRepo() StructRepository
 	ImportRepo() ImportRepository

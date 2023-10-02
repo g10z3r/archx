@@ -1,7 +1,7 @@
-package dao
+package model
 
 import (
-	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
+	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
 type PackageDAO struct {
@@ -15,10 +15,10 @@ type PackageDAO struct {
 	SideEffectImports []int    `bson:"sideEffectImports"`
 }
 
-func MapPackageDTO(dto *domainDTO.PackageDTO) PackageDAO {
+func MapPackageEntity(e *entity.PackageEntity) PackageDAO {
 	return PackageDAO{
-		Name: dto.Name,
-		Path: dto.Path,
+		Name: e.Name,
+		Path: e.Path,
 
 		Structs:      make([]StructDAO, 0),
 		StructsIndex: make(map[string]int),

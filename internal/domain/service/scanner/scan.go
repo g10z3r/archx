@@ -12,7 +12,7 @@ import (
 	"github.com/g10z3r/archx/internal/domain/service/scanner/cache"
 	"github.com/g10z3r/archx/pkg/bloom"
 
-	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
+	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
 type scannerCache interface {
@@ -24,12 +24,12 @@ type scannerCache interface {
 type packageCache interface {
 	ImportsLen() int
 	CheckImport(b []byte) (bool, error)
-	AddImport(_import *domainDTO.ImportDTO, index int)
-	AddImportIndex(_import *domainDTO.ImportDTO, index int)
+	AddImport(_import *entity.ImportEntity, index int)
+	AddImportIndex(_import *entity.ImportEntity, index int)
 	GetImportIndex(importAlias string) int
 	GetImports() []string
 	CheckSideEffectImport(b []byte) (bool, error)
-	AddSideEffectImport(_import *domainDTO.ImportDTO)
+	AddSideEffectImport(_import *entity.ImportEntity)
 
 	StructsIndexLen() int
 	AddStructIndex(structName string)
@@ -44,7 +44,7 @@ type ScanService struct {
 	_fset *token.FileSet
 
 	cache scannerCache
-	db    repository.ScannerRepository
+	db    repository.SnapshotRepository
 }
 
 func (s *ScanService) getFileSet() *token.FileSet {
@@ -53,7 +53,7 @@ func (s *ScanService) getFileSet() *token.FileSet {
 	return s._fset
 }
 
-func NewScanService(scanRepo repository.ScannerRepository) *ScanService {
+func NewScanService(scanRepo repository.SnapshotRepository) *ScanService {
 	return &ScanService{
 		_fset: token.NewFileSet(),
 		cache: cache.NewScannerCache(),
@@ -62,7 +62,7 @@ func NewScanService(scanRepo repository.ScannerRepository) *ScanService {
 }
 
 func (s *ScanService) Perform(ctx context.Context, dirPath string, basePath string) {
-	if err := s.db.Register(ctx, domainDTO.NewScanResultDTO(basePath)); err != nil {
+	if err := s.db.Register(ctx, entity.NewSnapshotEntity(basePath)); err != nil {
 		log.Fatal(err)
 	}
 
@@ -120,8 +120,8 @@ func (s *ScanService) Perform(ctx context.Context, dirPath string, basePath stri
 	}
 }
 
-func (s *ScanService) registerNewPackage(ctx context.Context, dirPath, pkgName string) (*domainDTO.PackageDTO, error) {
-	newPkg := domainDTO.NewPackageDTO(dirPath, pkgName)
+func (s *ScanService) registerNewPackage(ctx context.Context, dirPath, pkgName string) (*entity.PackageEntity, error) {
+	newPkg := entity.NewPackageEntity(dirPath, pkgName)
 	if err := s.db.PackageRepo().Append(ctx, newPkg, s.cache.PackagesIndexLen()); err != nil {
 		return nil, err
 	}
@@ -132,11 +132,11 @@ func (s *ScanService) registerNewPackage(ctx context.Context, dirPath, pkgName s
 
 type pkgImportData struct {
 	pkgCache packageCache
-	newPkg   *domainDTO.PackageDTO
+	newPkg   *entity.PackageEntity
 	basePath string
 }
 
-func (s *ScanService) processPackageImport(ctx context.Context, data pkgImportData, _import *domainDTO.ImportDTO) error {
+func (s *ScanService) processPackageImport(ctx context.Context, data pkgImportData, _import *entity.ImportEntity) error {
 	_import.Trim(data.basePath)
 
 	if isSideEffectImport(_import) {
@@ -182,16 +182,16 @@ func (s *ScanService) processPackageImport(ctx context.Context, data pkgImportDa
 	return nil
 }
 
-func fetchPackageImports(files map[string]*ast.File) ([]*domainDTO.ImportDTO, int) {
+func fetchPackageImports(files map[string]*ast.File) ([]*entity.ImportEntity, int) {
 	var impTotal int
-	var imports []*domainDTO.ImportDTO
+	var imports []*entity.ImportEntity
 
 	for _, file := range files {
 		impTotal = impTotal + len(file.Imports)
 
 		for _, imp := range file.Imports {
 			if imp.Path != nil && imp.Path.Value != "" {
-				imports = append(imports, domainDTO.NewImportDTO(imp))
+				imports = append(imports, entity.NewImportEntity(imp))
 			}
 		}
 	}
@@ -199,6 +199,6 @@ func fetchPackageImports(files map[string]*ast.File) ([]*domainDTO.ImportDTO, in
 	return imports, impTotal
 }
 
-func isSideEffectImport(_import *domainDTO.ImportDTO) bool {
+func isSideEffectImport(_import *entity.ImportEntity) bool {
 	return _import.WithAlias && _import.Alias == "_"
 }

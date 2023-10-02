@@ -1,4 +1,4 @@
-package dto
+package entity
 
 import (
 	"bytes"
@@ -16,18 +16,18 @@ const (
 	onlyPreinitialized = false
 )
 
-type FieldDTO struct {
+type FieldEntity struct {
 	_ [0]int
 
 	start token.Pos
 	end   token.Pos
 
 	Type     string
-	Embedded *StructDTO
+	Embedded *StructEntity
 	IsPublic bool
 }
 
-type MethodDTO struct {
+type MethodEntity struct {
 	start token.Pos
 	end   token.Pos
 
@@ -35,8 +35,8 @@ type MethodDTO struct {
 	IsPublic   bool
 }
 
-func NewMethodDTO(res *ast.FuncDecl) *MethodDTO {
-	return &MethodDTO{
+func NewMethodEntity(res *ast.FuncDecl) *MethodEntity {
+	return &MethodEntity{
 		start:      res.Pos(),
 		end:        res.End(),
 		UsedFields: make(map[string]int),
@@ -44,12 +44,12 @@ func NewMethodDTO(res *ast.FuncDecl) *MethodDTO {
 	}
 }
 
-type DependencyDTO struct {
+type DependencyEntity struct {
 	ImportIndex int
 	Usage       int
 }
 
-type StructDTO struct {
+type StructEntity struct {
 	_ [0]int
 
 	Name *string
@@ -57,25 +57,25 @@ type StructDTO struct {
 	start token.Pos
 	end   token.Pos
 
-	Fields      []*FieldDTO
+	Fields      []*FieldEntity
 	FieldsIndex map[string]int
 
-	Methods      []*MethodDTO
+	Methods      []*MethodEntity
 	MethodsIndex map[string]int
 
-	Dependencies      []*DependencyDTO
+	Dependencies      []*DependencyEntity
 	DependenciesIndex map[string]int
 
 	isIncompleted bool
 	isEmbedded    bool
 }
 
-func (s *StructDTO) AddDependency(importIndex int, element string) {
+func (s *StructEntity) AddDependency(importIndex int, element string) {
 	if index, exists := s.DependenciesIndex[element]; exists {
 		s.Dependencies[index].ImportIndex = importIndex
 		s.Dependencies[index].Usage++
 	} else {
-		dep := &DependencyDTO{
+		dep := &DependencyEntity{
 			ImportIndex: importIndex,
 			Usage:       1,
 		}
@@ -84,30 +84,30 @@ func (s *StructDTO) AddDependency(importIndex int, element string) {
 	}
 }
 
-func (s *StructDTO) AddMethod(metdod *MethodDTO, name string) {
+func (s *StructEntity) AddMethod(metdod *MethodEntity, name string) {
 	s.Methods = append(s.Methods, metdod)
 	s.MethodsIndex[name] = len(s.Methods) - 1
 }
 
-func NewStructDTO(fset *token.FileSet, res *ast.StructType, isEmbedded bool, name *string) (*StructDTO, []UsedPackage, error) {
+func NewStructEntity(fset *token.FileSet, res *ast.StructType, isEmbedded bool, name *string) (*StructEntity, []UsedPackage, error) {
 	mapMetaData, err := extractFieldMap(fset, res.Fields.List)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to extract field map: %w", err)
 	}
 
-	var methods []*MethodDTO
+	var methods []*MethodEntity
 	var methodsIndex map[string]int
-	var dependencies []*DependencyDTO
+	var dependencies []*DependencyEntity
 	var dependenciesIndex map[string]int
 
 	if !isEmbedded {
-		methods = []*MethodDTO{}
+		methods = []*MethodEntity{}
 		methodsIndex = make(map[string]int)
-		dependencies = make([]*DependencyDTO, 0, len(mapMetaData.usedPackages))
+		dependencies = make([]*DependencyEntity, 0, len(mapMetaData.usedPackages))
 		dependenciesIndex = make(map[string]int, len(mapMetaData.usedPackages))
 	}
 
-	return &StructDTO{
+	return &StructEntity{
 			Name:              name,
 			start:             res.Pos(),
 			end:               res.End(),
@@ -131,12 +131,12 @@ type UsedPackage struct {
 
 type fieldMapMetaData struct {
 	usedPackages []UsedPackage
-	fieldsSet    []*FieldDTO
+	fieldsSet    []*FieldEntity
 	fieldsIndex  map[string]int
 }
 
 func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMetaData, error) {
-	fields := make([]*FieldDTO, 0, len(fieldList))
+	fields := make([]*FieldEntity, 0, len(fieldList))
 	fieldsIndex := make(map[string]int, len(fieldList))
 	usedPackages := []UsedPackage{}
 
@@ -152,7 +152,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 
 		for _, name := range field.Names {
 			fieldsIndex[name.Name] = i
-			fields = append(fields, &FieldDTO{
+			fields = append(fields, &FieldEntity{
 				start:    name.Pos(),
 				end:      name.End(),
 				Type:     fieldMetaData._type,
@@ -172,13 +172,13 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 type fieldTypeMetaData struct {
 	_type          string
 	usedPackages   []UsedPackage
-	embeddedStruct *StructDTO
+	embeddedStruct *StructEntity
 }
 
 func extractFieldType(fset *token.FileSet, fieldType ast.Expr) (*fieldTypeMetaData, error) {
 	switch ft := fieldType.(type) {
 	case *ast.StructType:
-		embedded, usedPackages, err := NewStructDTO(fset, ft, true, nil)
+		embedded, usedPackages, err := NewStructEntity(fset, ft, true, nil)
 		if err != nil {
 			return nil, err
 		}

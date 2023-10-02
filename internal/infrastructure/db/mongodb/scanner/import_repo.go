@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
+	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
 type importRepository struct {
@@ -23,7 +23,7 @@ func newImportRepository(docID primitive.ObjectID, col *mongo.Collection) *impor
 	}
 }
 
-func (r *importRepository) Append(ctx context.Context, _import *domainDTO.ImportDTO, packagePath string) error {
+func (r *importRepository) Append(ctx context.Context, _import *entity.ImportEntity, packagePath string) error {
 	filter := bson.D{
 		{Key: "_id", Value: r.documentID},
 	}
@@ -46,7 +46,7 @@ func (r *importRepository) Append(ctx context.Context, _import *domainDTO.Import
 	return nil
 }
 
-func (r *importRepository) AppendSideEffectImport(ctx context.Context, _import *domainDTO.ImportDTO, packagePath string) error {
+func (r *importRepository) AppendSideEffectImport(ctx context.Context, _import *entity.ImportEntity, packagePath string) error {
 	filter := bson.D{
 		{Key: "_id", Value: r.documentID},
 	}

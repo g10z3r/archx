@@ -1,25 +1,25 @@
-package dto
+package entity
 
 import (
 	"go/ast"
 	"strings"
 )
 
-type ImportDTO struct {
+type ImportEntity struct {
 	Path      string
 	Alias     string
 	WithAlias bool
 }
 
-func (dto *ImportDTO) Trim(basePath string) {
+func (e *ImportEntity) Trim(basePath string) {
 	if !strings.HasSuffix(basePath, "/") {
 		basePath += "/"
 	}
 
-	dto.Path = "/" + strings.TrimPrefix(dto.Path, basePath)
+	e.Path = "/" + strings.TrimPrefix(e.Path, basePath)
 }
 
-func NewImportDTO(importSpec *ast.ImportSpec) *ImportDTO {
+func NewImportEntity(importSpec *ast.ImportSpec) *ImportEntity {
 	var isWithAlias bool
 	var alias string
 
@@ -27,7 +27,7 @@ func NewImportDTO(importSpec *ast.ImportSpec) *ImportDTO {
 		alias = importSpec.Name.Name
 		isWithAlias = true
 	}
-	return &ImportDTO{
+	return &ImportEntity{
 		Path:      strings.Trim(importSpec.Path.Value, `"`),
 		Alias:     alias,
 		WithAlias: isWithAlias,

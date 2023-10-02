@@ -1,20 +1,20 @@
-package dao
+package model
 
 import (
-	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
+	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
-type ScanResultDAO struct {
+type SnapshotDAO struct {
 	Timestamp     int64          `bson:"timestamp"`
 	BasePath      string         `bson:"basePath"`
 	Packages      []PackageDAO   `bson:"packages"`
 	PackagesIndex map[string]int `bson:"packagesIndex"`
 }
 
-func MapScanResultDTO(dto *domainDTO.ScanResultDTO) *ScanResultDAO {
-	return &ScanResultDAO{
-		Timestamp:     dto.Timestamp,
-		BasePath:      dto.BasePath,
+func MapSnapshotEntity(e *entity.SnapshotEntity) *SnapshotDAO {
+	return &SnapshotDAO{
+		Timestamp:     e.Timestamp,
+		BasePath:      e.BasePath,
 		Packages:      make([]PackageDAO, 0),
 		PackagesIndex: make(map[string]int),
 	}

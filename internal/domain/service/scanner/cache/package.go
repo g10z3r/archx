@@ -8,7 +8,7 @@ import (
 
 	"github.com/g10z3r/archx/pkg/bloom"
 
-	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
+	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
 type packageCache struct {
@@ -77,14 +77,14 @@ func (pc *packageCache) CheckSideEffectImport(b []byte) (bool, error) {
 	return pc.sideEffectImports.MightContain(b)
 }
 
-func (pc *packageCache) AddSideEffectImport(_import *domainDTO.ImportDTO) {
+func (pc *packageCache) AddSideEffectImport(_import *entity.ImportEntity) {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
 
 	pc.sideEffectImports.Put([]byte(_import.Path))
 }
 
-func (pc *packageCache) AddImport(_import *domainDTO.ImportDTO, index int) {
+func (pc *packageCache) AddImport(_import *entity.ImportEntity, index int) {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
 
@@ -93,14 +93,14 @@ func (pc *packageCache) AddImport(_import *domainDTO.ImportDTO, index int) {
 	pc.ImportsIndex[getAlias(_import)] = index
 }
 
-func (pc *packageCache) AddImportIndex(_import *domainDTO.ImportDTO, index int) {
+func (pc *packageCache) AddImportIndex(_import *entity.ImportEntity, index int) {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
 
 	pc.ImportsIndex[getAlias(_import)] = index
 }
 
-func getAlias(_import *domainDTO.ImportDTO) string {
+func getAlias(_import *entity.ImportEntity) string {
 	if _import.WithAlias {
 		return _import.Alias
 	}

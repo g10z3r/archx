@@ -32,7 +32,7 @@ func main() {
 	db := client.Database("archant")
 	collection := db.Collection("someproject")
 
-	scanRepo := mongoScannerRepo.NewScanResultRepository(collection)
+	scanRepo := mongoScannerRepo.NewSnapshotRepository(collection)
 	scanService := scanner.NewScanService(scanRepo)
-	scanService.Perform(ctx, "./example/cmd", "github.com/g10z3r/archx")
+	scanService.Perform(ctx, "example/cmd", "github.com/g10z3r/archx")
 }

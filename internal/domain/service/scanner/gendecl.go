@@ -5,7 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	domainDTO "github.com/g10z3r/archx/internal/domain/dto"
+	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
 func (s *ScanService) processGenDecl(ctx context.Context, genDecl *ast.GenDecl, pkgCache packageCache, pkgPath string) error {
@@ -42,19 +42,19 @@ type structProcessingParams struct {
 }
 
 func (s *ScanService) processStructType(ctx context.Context, pkgCache packageCache, params structProcessingParams) error {
-	structDTO, usedPackages, err := domainDTO.NewStructDTO(s.getFileSet(), params.structType, domainDTO.NotEmbedded, &params.structName)
+	structEntity, usedPackages, err := entity.NewStructEntity(s.getFileSet(), params.structType, entity.NotEmbedded, &params.structName)
 	if err != nil {
 		return err
 	}
 
 	for i := 0; i < len(usedPackages); i++ {
 		if index := pkgCache.GetImportIndex(usedPackages[i].Alias); index >= 0 {
-			structDTO.AddDependency(index, usedPackages[i].Element)
+			structEntity.AddDependency(index, usedPackages[i].Element)
 		}
 	}
 
 	if index := pkgCache.GetStructIndex(params.structName); index < 0 {
-		if err := s.db.PackageRepo().StructRepo().Append(ctx, structDTO, pkgCache.StructsIndexLen(), params.pkgPath); err != nil {
+		if err := s.db.PackageRepo().StructRepo().Append(ctx, structEntity, pkgCache.StructsIndexLen(), params.pkgPath); err != nil {
 			return err
 		}
 
