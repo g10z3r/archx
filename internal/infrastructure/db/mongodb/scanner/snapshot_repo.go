@@ -12,17 +12,18 @@ import (
 )
 
 type snapshotRepository struct {
-	documentID  primitive.ObjectID
-	collection  *mongo.Collection
-	packageRepo repository.PackageRepository
+	documentID primitive.ObjectID
+	collection *mongo.Collection
+
+	packageAcc repository.PackageAccessor
 }
 
 func NewSnapshotRepository(col *mongo.Collection) repository.SnapshotRepository {
 	return &snapshotRepository{collection: col}
 }
 
-func (r *snapshotRepository) PackageRepo() repository.PackageRepository {
-	return r.packageRepo
+func (r *snapshotRepository) PackageAcc() repository.PackageAccessor {
+	return r.packageAcc
 }
 
 func (r *snapshotRepository) Register(ctx context.Context, result *entity.SnapshotEntity) error {
@@ -32,7 +33,7 @@ func (r *snapshotRepository) Register(ctx context.Context, result *entity.Snapsh
 	}
 
 	r.documentID = insertResult.InsertedID.(primitive.ObjectID)
-	r.packageRepo = newPackageRepository(r.documentID, r.collection)
+	r.packageAcc = newPackageAccessor(r.documentID, r.collection)
 
 	return nil
 }

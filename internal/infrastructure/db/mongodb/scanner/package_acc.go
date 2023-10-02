@@ -13,33 +13,33 @@ import (
 	"github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/model"
 )
 
-type packageRepository struct {
+type packageAccessor struct {
 	documentID primitive.ObjectID
 	collection *mongo.Collection
 
-	importRepo repository.ImportRepository
-	structRepo repository.StructRepository
+	importAcc repository.ImportAccessor
+	structAcc repository.StructAccessor
 }
 
-func newPackageRepository(docID primitive.ObjectID, col *mongo.Collection) *packageRepository {
-	return &packageRepository{
+func newPackageAccessor(docID primitive.ObjectID, col *mongo.Collection) *packageAccessor {
+	return &packageAccessor{
 		documentID: docID,
 		collection: col,
 
-		importRepo: newImportRepository(docID, col),
-		structRepo: newStructRepository(docID, col),
+		importAcc: newImportAccessor(docID, col),
+		structAcc: newStructAccessor(docID, col),
 	}
 }
 
-func (r *packageRepository) ImportRepo() repository.ImportRepository {
-	return r.importRepo
+func (r *packageAccessor) ImportAcc() repository.ImportAccessor {
+	return r.importAcc
 }
 
-func (r *packageRepository) StructRepo() repository.StructRepository {
-	return r.structRepo
+func (r *packageAccessor) StructAcc() repository.StructAccessor {
+	return r.structAcc
 }
 
-func (r *packageRepository) Append(ctx context.Context, newPackage *entity.PackageEntity, packageIndex int) error {
+func (r *packageAccessor) Append(ctx context.Context, newPackage *entity.PackageEntity, packageIndex int) error {
 	filter := bson.D{
 		{Key: "_id", Value: r.documentID},
 	}

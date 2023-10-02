@@ -11,19 +11,19 @@ import (
 	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
-type importRepository struct {
+type importAccessor struct {
 	documentID primitive.ObjectID
 	collection *mongo.Collection
 }
 
-func newImportRepository(docID primitive.ObjectID, col *mongo.Collection) *importRepository {
-	return &importRepository{
+func newImportAccessor(docID primitive.ObjectID, col *mongo.Collection) *importAccessor {
+	return &importAccessor{
 		documentID: docID,
 		collection: col,
 	}
 }
 
-func (r *importRepository) Append(ctx context.Context, _import *entity.ImportEntity, packagePath string) error {
+func (r *importAccessor) Append(ctx context.Context, _import *entity.ImportEntity, packagePath string) error {
 	filter := bson.D{
 		{Key: "_id", Value: r.documentID},
 	}
@@ -42,7 +42,7 @@ func (r *importRepository) Append(ctx context.Context, _import *entity.ImportEnt
 	return err
 }
 
-func (r *importRepository) AppendSideEffectImport(ctx context.Context, _import *entity.ImportEntity, packagePath string) error {
+func (r *importAccessor) AppendSideEffectImport(ctx context.Context, _import *entity.ImportEntity, packagePath string) error {
 	filter := bson.D{
 		{Key: "_id", Value: r.documentID},
 	}

@@ -31,8 +31,25 @@ type MethodEntity struct {
 	start token.Pos
 	end   token.Pos
 
+	Dependencies      []*DependencyEntity
+	DependenciesIndex map[string]int
+
 	UsedFields map[string]int
 	IsPublic   bool
+}
+
+func (s *MethodEntity) AddDependency(importIndex int, element string) {
+	if index, exists := s.DependenciesIndex[element]; exists {
+		s.Dependencies[index].ImportIndex = importIndex
+		s.Dependencies[index].Usage++
+	} else {
+		dep := &DependencyEntity{
+			ImportIndex: importIndex,
+			Usage:       1,
+		}
+		s.Dependencies = append(s.Dependencies, dep)
+		s.DependenciesIndex[element] = len(s.Dependencies) - 1
+	}
 }
 
 func NewMethodEntity(res *ast.FuncDecl) *MethodEntity {

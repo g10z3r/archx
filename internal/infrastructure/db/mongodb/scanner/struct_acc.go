@@ -13,22 +13,22 @@ import (
 	"github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/model"
 )
 
-type structRepository struct {
+type structAccessor struct {
 	mu sync.Mutex
 
 	documentID primitive.ObjectID
 	collection *mongo.Collection
 }
 
-func newStructRepository(docID primitive.ObjectID, col *mongo.Collection) *structRepository {
-	return &structRepository{
+func newStructAccessor(docID primitive.ObjectID, col *mongo.Collection) *structAccessor {
+	return &structAccessor{
 		mu:         sync.Mutex{},
 		documentID: docID,
 		collection: col,
 	}
 }
 
-func (r *structRepository) Append(ctx context.Context, structEntity *entity.StructEntity, structIndex int, pkgPath string) error {
+func (r *structAccessor) Append(ctx context.Context, structEntity *entity.StructEntity, structIndex int, pkgPath string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
