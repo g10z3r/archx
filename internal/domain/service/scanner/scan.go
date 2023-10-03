@@ -10,7 +10,6 @@ import (
 
 	"github.com/g10z3r/archx/internal/domain/repository"
 	"github.com/g10z3r/archx/internal/domain/service/scanner/cache"
-	"github.com/g10z3r/archx/pkg/bloom"
 
 	"github.com/g10z3r/archx/internal/domain/entity"
 )
@@ -21,22 +20,7 @@ type scannerCache interface {
 	PackagesIndexLen() int
 }
 
-type packageCache interface {
-	CheckImport(b []byte) (bool, error)
-	AddImport(_import *entity.ImportEntity)
-	AddImportIndex(_import *entity.ImportEntity, index int)
-	GetImportIndex(importAlias string) int
-	GetImports() []string
-	CheckSideEffectImport(b []byte) (bool, error)
-	AddSideEffectImport(_import *entity.ImportEntity)
-
-	AddStructIndex(structName string) int
-	GetStructIndex(structName string) int
-
-	Debug()
-}
-
-type ScanService struct {
+type Scanner struct {
 	mu sync.RWMutex
 
 	_fset *token.FileSet
@@ -45,26 +29,21 @@ type ScanService struct {
 	db    repository.SnapshotRepository
 }
 
-func (s *ScanService) getFileSet() *token.FileSet {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s._fset
-}
-
-func NewScanService(scanRepo repository.SnapshotRepository) *ScanService {
-	return &ScanService{
+func NewScanner(scanRepo repository.SnapshotRepository) *Scanner {
+	return &Scanner{
 		_fset: token.NewFileSet(),
 		cache: cache.NewScannerCache(),
 		db:    scanRepo,
 	}
 }
 
-func (s *ScanService) Perform(ctx context.Context, dirPath string, basePath string) {
+func (s *Scanner) Perform(ctx context.Context, dirPath string, basePath string) {
 	if err := s.db.Register(ctx, entity.NewSnapshotEntity(basePath)); err != nil {
 		log.Fatal(err)
 	}
 
-	pkgs, err := parser.ParseDir(s._fset, dirPath, nil, parser.AllErrors)
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, dirPath, nil, parser.AllErrors)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,52 +54,37 @@ func (s *ScanService) Perform(ctx context.Context, dirPath string, basePath stri
 			log.Fatal(err)
 		}
 
-		pkgImports, total := fetchPackageImports(pkg.Files)
-		pkgCache := cache.NewPackageCache(bloom.FilterConfig{
-			ExpectedItemCount:        uint64(total),
-			DesiredFalsePositiveRate: 0.01,
-		})
+		pkgActor := newPackageActor(s.db.PackageAcc(), fset, newPkg)
+		pkgImports := pkgActor.IndexationImports(pkg)
 
-		for _, _import := range pkgImports {
-			pid := pkgImportData{
-				pkgCache: pkgCache,
-				newPkg:   newPkg,
-				basePath: basePath,
-			}
-
-			if err := s.processPackageImport(ctx, pid, _import); err != nil {
-				log.Fatal(err)
-			}
+		if err := pkgActor.ProcessAllImports(ctx, pkgImports, basePath); err != nil {
+			log.Fatal(err)
 		}
 
-		var wg sync.WaitGroup
-
+		var pkgWaitGroup sync.WaitGroup
 		for fileName, file := range pkg.Files {
-			wg.Add(1)
+			pkgWaitGroup.Add(1)
+
 			go func(file *ast.File, fileName string) {
-				defer wg.Done()
+				defer pkgWaitGroup.Done()
 
-				log.Printf("Processing file: %s", fileName)
-
-				for _, decl := range file.Decls {
-					switch d := decl.(type) {
-					case *ast.GenDecl:
-						if err = s.processGenDecl(ctx, d, pkgCache, newPkg.Path); err != nil {
-							log.Fatal(err)
-						}
-					}
+				if err := pkgActor.ScanFile(ctx, fileName, file); err != nil {
+					log.Fatal(err)
 				}
+
 			}(file, fileName)
 		}
 
-		wg.Wait()
-		pkgCache.Debug()
+		pkgWaitGroup.Wait()
 	}
 }
 
-func (s *ScanService) registerNewPackage(ctx context.Context, dirPath, pkgName string) (*entity.PackageEntity, error) {
+func (s *Scanner) registerNewPackage(ctx context.Context, dirPath, pkgName string) (*entity.PackageEntity, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	newPkg := entity.NewPackageEntity(dirPath, pkgName)
-	if err := s.db.PackageRepo().Append(ctx, newPkg, s.cache.PackagesIndexLen()); err != nil {
+	if err := s.db.PackageAcc().Append(ctx, newPkg, s.cache.PackagesIndexLen()); err != nil {
 		return nil, err
 	}
 	s.cache.AddPackage(newPkg.Path, s.cache.PackagesIndexLen())
@@ -128,75 +92,75 @@ func (s *ScanService) registerNewPackage(ctx context.Context, dirPath, pkgName s
 	return newPkg, nil
 }
 
-type pkgImportData struct {
-	pkgCache packageCache
-	newPkg   *entity.PackageEntity
-	basePath string
-}
+// type pkgImportData struct {
+// 	pkgCache packageCache
+// 	newPkg   *entity.PackageEntity
+// 	basePath string
+// }
 
-func (s *ScanService) processPackageImport(ctx context.Context, data pkgImportData, _import *entity.ImportEntity) error {
-	_import.Trim(data.basePath)
+// func (s *Scanner) processPackageImport(ctx context.Context, data pkgImportData, _import *entity.ImportEntity) error {
+// 	_import.Trim(data.basePath)
 
-	if isSideEffectImport(_import) {
-		contains, err := data.pkgCache.CheckSideEffectImport([]byte(_import.Path))
-		if err != nil {
-			return err
-		}
+// 	if isSideEffectImport(_import) {
+// 		contains, err := data.pkgCache.CheckSideEffectImport([]byte(_import.Path))
+// 		if err != nil {
+// 			return err
+// 		}
 
-		if contains {
-			return nil
-		}
+// 		if contains {
+// 			return nil
+// 		}
 
-		if err := s.db.PackageRepo().ImportRepo().AppendSideEffectImport(ctx, _import, data.newPkg.Path); err != nil {
-			return err
-		}
+// 		if err := s.db.PackageAcc().ImportAcc().AppendSideEffectImport(ctx, _import, data.newPkg.Path); err != nil {
+// 			return err
+// 		}
 
-		data.pkgCache.AddSideEffectImport(_import)
-		return nil
-	}
+// 		data.pkgCache.AddSideEffectImport(_import)
+// 		return nil
+// 	}
 
-	contains, err := data.pkgCache.CheckImport([]byte(_import.Path))
-	if err != nil {
-		return err
-	}
+// 	contains, err := data.pkgCache.CheckImport([]byte(_import.Path))
+// 	if err != nil {
+// 		return err
+// 	}
 
-	if !contains {
-		if err := s.db.PackageRepo().ImportRepo().Append(ctx, _import, data.newPkg.Path); err != nil {
-			return err
-		}
+// 	if !contains {
+// 		if err := s.db.PackageAcc().ImportAcc().Append(ctx, _import, data.newPkg.Path); err != nil {
+// 			return err
+// 		}
 
-		data.pkgCache.AddImport(_import)
-		return nil
-	}
+// 		data.pkgCache.AddImport(_import)
+// 		return nil
+// 	}
 
-	if index := data.pkgCache.GetImportIndex(_import.Alias); index < 0 {
-		for i, imp := range data.pkgCache.GetImports() {
-			if imp == _import.Path {
-				data.pkgCache.AddImportIndex(_import, i)
-			}
-		}
-	}
+// 	if index := data.pkgCache.GetImportIndex(_import.Alias); index < 0 {
+// 		for i, imp := range data.pkgCache.GetImports() {
+// 			if imp == _import.Path {
+// 				data.pkgCache.AddImportIndex(_import, i)
+// 			}
+// 		}
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
-func fetchPackageImports(files map[string]*ast.File) ([]*entity.ImportEntity, int) {
-	var impTotal int
-	var imports []*entity.ImportEntity
+// func fetchPackageImports(files map[string]*ast.File) ([]*entity.ImportEntity, int) {
+// 	var impTotal int
+// 	var imports []*entity.ImportEntity
 
-	for _, file := range files {
-		impTotal = impTotal + len(file.Imports)
+// 	for _, file := range files {
+// 		impTotal = impTotal + len(file.Imports)
 
-		for _, imp := range file.Imports {
-			if imp.Path != nil && imp.Path.Value != "" {
-				imports = append(imports, entity.NewImportEntity(imp))
-			}
-		}
-	}
+// 		for _, imp := range file.Imports {
+// 			if imp.Path != nil && imp.Path.Value != "" {
+// 				imports = append(imports, entity.NewImportEntity(imp))
+// 			}
+// 		}
+// 	}
 
-	return imports, impTotal
-}
+// 	return imports, impTotal
+// }
 
-func isSideEffectImport(_import *entity.ImportEntity) bool {
-	return _import.WithAlias && _import.Alias == "_"
-}
+// func isSideEffectImport(_import *entity.ImportEntity) bool {
+// 	return _import.WithAlias && _import.Alias == "_"
+// }

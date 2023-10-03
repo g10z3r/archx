@@ -24,11 +24,17 @@ type StructDAO struct {
 	Fields      []*FieldDAO    `bson:"fields"`
 	FieldsIndex map[string]int `bson:"fieldsIndex"`
 
-	Methods      []*MethodDAO   `bson:"methods"`
-	MethodsIndex map[string]int `bson:"methodsIndex"`
+	Methods []*MethodDAO `bson:"methods"`
 
 	Dependencies      []*DependencyDAO `bson:"dependencies"`
 	DependenciesIndex map[string]int   `bson:"dependenciesIndex"`
+}
+
+func MapMethodEntity(e *entity.MethodEntity) *MethodDAO {
+	return &MethodDAO{
+		UsedFields: e.UsedFields,
+		IsPublic:   e.IsPublic,
+	}
 }
 
 func MapStructEntity(e *entity.StructEntity) *StructDAO {
@@ -51,7 +57,6 @@ func MapStructEntity(e *entity.StructEntity) *StructDAO {
 		Fields:            fields,
 		FieldsIndex:       e.FieldsIndex,
 		Methods:           methods,
-		MethodsIndex:      e.MethodsIndex,
 		Dependencies:      deps,
 		DependenciesIndex: e.DependenciesIndex,
 	}

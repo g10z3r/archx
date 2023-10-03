@@ -33,6 +33,6 @@ func main() {
 	collection := db.Collection("someproject")
 
 	scanRepo := mongoScannerRepo.NewSnapshotRepository(collection)
-	scanService := scanner.NewScanService(scanRepo)
+	scanService := scanner.NewScanner(scanRepo)
 	scanService.Perform(ctx, "example/cmd", "github.com/g10z3r/archx")
 }

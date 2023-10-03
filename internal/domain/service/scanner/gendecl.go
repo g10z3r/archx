@@ -4,11 +4,12 @@ import (
 	"context"
 	"go/ast"
 	"go/token"
+	"log"
 
 	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
-func (s *ScanService) processGenDecl(ctx context.Context, genDecl *ast.GenDecl, pkgCache packageCache, pkgPath string) error {
+func (pa *packageActor) processGenDecl(ctx context.Context, genDecl *ast.GenDecl) error {
 	if genDecl.Tok != token.TYPE {
 		return nil
 	}
@@ -21,10 +22,9 @@ func (s *ScanService) processGenDecl(ctx context.Context, genDecl *ast.GenDecl, 
 
 		switch t := typeSpec.Type.(type) {
 		case *ast.StructType:
-			s.processStructType(ctx, pkgCache, structProcessingParams{
+			return pa.processStructType(ctx, &structProcessingParams{
 				typeSpec:   typeSpec,
 				structType: t,
-				pkgPath:    pkgPath,
 				structName: typeSpec.Name.Name,
 			})
 		}
@@ -37,29 +37,40 @@ func (s *ScanService) processGenDecl(ctx context.Context, genDecl *ast.GenDecl, 
 type structProcessingParams struct {
 	typeSpec   *ast.TypeSpec
 	structType *ast.StructType
-	pkgPath    string
+	// pkgPath    string
 	structName string
 }
 
-func (s *ScanService) processStructType(ctx context.Context, pkgCache packageCache, params structProcessingParams) error {
-	structEntity, usedPackages, err := entity.NewStructEntity(s.getFileSet(), params.structType, entity.NotEmbedded, &params.structName)
+func (pa *packageActor) processStructType(ctx context.Context, params *structProcessingParams) error {
+	structEntity, usedPackages, err := entity.NewStructEntity(pa.FileSet(), params.structType, entity.NotEmbedded, &params.structName)
 	if err != nil {
 		return err
 	}
 
-	for i := 0; i < len(usedPackages); i++ {
-		if index := pkgCache.GetImportIndex(usedPackages[i].Alias); index >= 0 {
-			structEntity.AddDependency(index, usedPackages[i].Element)
+	for _, pkg := range usedPackages {
+		if index := pa.cache.GetImportIndex(pkg.Alias); index >= 0 {
+			structEntity.AddDependency(index, pkg.Element)
 		}
 	}
 
-	if index := pkgCache.GetStructIndex(params.structName); index < 0 {
-		indexInCache := pkgCache.AddStructIndex(params.structName)
-		if err := s.db.PackageRepo().StructRepo().Append(ctx, structEntity, indexInCache, params.pkgPath); err != nil {
-			return err
+	pa.mu.Lock()
+	defer pa.mu.Unlock()
+
+	if index := pa.cache.GetStructIndex(params.structName); index < 0 {
+		// sync with buffer
+		for _, method := range pa.buf.GetAndClearMethods(params.structName) {
+			structEntity.AddMethod(method, method.Name)
+			log.Printf("Syncing method %s", method.Name)
+
+			depsLen := len(structEntity.DependenciesIndex)
+			for dep, i := range method.DependenciesIndex {
+				structEntity.Dependencies = append(structEntity.Dependencies, method.Dependencies[i])
+				structEntity.DependenciesIndex[dep] = depsLen + i
+			}
 		}
 
-		return nil
+		index := pa.cache.AddStructIndex(params.structName)
+		return pa.db.StructAcc().Append(ctx, structEntity, index, pa.pkg.Path)
 	}
 
 	return nil

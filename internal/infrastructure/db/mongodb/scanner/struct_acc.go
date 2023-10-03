@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -51,5 +52,42 @@ func (r *structAccessor) Append(ctx context.Context, structEntity *entity.Struct
 	}
 
 	_, err := r.collection.UpdateOne(ctx, filter, update)
+	log.Printf("Saved %s to db", *structEntity.Name)
 	return err
+}
+
+func (r *structAccessor) AddMethod(ctx context.Context, methodEntity *entity.MethodEntity, structIndex int, pkgPath string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// filter := bson.D{
+	// 	{Key: "_id", Value: r.documentID},
+	// 	{Key: "packages.path", Value: pkgPath},
+	// }
+
+	// if structIndex == -1 {
+	// 	newStruct := model.StructDAO{
+	// 		Fields:            make([]*model.FieldDAO, 0),
+	// 		FieldsIndex:       make(map[string]int),
+	// 		Methods:           []*model.MethodDAO{model.MapMethodEntity(methodEntity)},
+	// 		Dependencies:      make([]*model.DependencyDAO, 0, len(methodEntity.Dependencies)),
+	// 		DependenciesIndex: make(map[string]int, len(methodEntity.Dependencies)),
+	// 	}
+
+	// 	// r.Append(ctx, newStruct, )
+	// }
+
+	// update := bson.D{
+	// 	{
+	// 		Key: "$push", Value: bson.D{
+	// 			{
+	// 				Key:   fmt.Sprintf("packages.$.structs.%d.methods", structIndex),
+	// 				Value: model.MapMethodEntity(methodEntity),
+	// 			},
+	// 		},
+	// 	},
+	// }
+
+	// _, err := r.collection.UpdateOne(ctx, filter, update)
+	return nil
 }

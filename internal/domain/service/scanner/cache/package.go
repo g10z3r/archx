@@ -24,6 +24,13 @@ type packageCache struct {
 	StructsIndex map[string]int
 }
 
+func (p *packageCache) GetStructsIndexLength() int {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	return len(p.StructsIndex)
+}
+
 func (pc *packageCache) GetImports() []string {
 	pc.mu.RLock()
 	defer pc.mu.RUnlock()
@@ -36,8 +43,8 @@ func (pc *packageCache) AddStructIndex(structName string) int {
 	defer pc.mu.Unlock()
 
 	index := len(pc.StructsIndex)
-	fmt.Println(structName, index)
 	pc.StructsIndex[structName] = index
+	fmt.Println("Saved to cache", structName, index)
 	return index
 }
 
@@ -128,6 +135,11 @@ func NewPackageCache(cfg bloom.FilterConfig) *packageCache {
 }
 
 func (pc *packageCache) Debug() {
-	jsonData, _ := json.Marshal(pc)
+	jsonData, err := json.Marshal(pc)
+	if err != nil {
+		log.Println("Error marshalling data:", err)
+		return
+	}
+
 	log.Println(string(jsonData))
 }

@@ -20,6 +20,17 @@ import (
 // 	Go
 // }
 
+func (p *Person) ChangeFirstName(newFirstName string) *Person {
+	pi := data.PersonalInfo{}
+	pi.TestMethod()
+
+	if newFirstName != p.FirstName {
+		p.FirstName = newFirstName
+	}
+
+	return p
+}
+
 type Address struct {
 	street, city string
 	state        string
@@ -40,17 +51,6 @@ type Person struct {
 		Speed        float32
 	}
 }
-
-// func (p *Person) ChangeFirstName(newFirstName string) *Person {
-// 	pi := data.PersonalInfo{}
-// 	pi.TestMethod()
-
-// 	if newFirstName != p.FirstName {
-// 		p.FirstName = newFirstName
-// 	}
-
-// 	return p
-// }
 
 // func (p *Person) ChangeLastName(newLastName string) *Person {
 // 	os.Getenv("TEST")

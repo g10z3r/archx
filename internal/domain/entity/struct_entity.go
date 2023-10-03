@@ -31,6 +31,8 @@ type MethodEntity struct {
 	start token.Pos
 	end   token.Pos
 
+	Name string
+
 	Dependencies      []*DependencyEntity
 	DependenciesIndex map[string]int
 
@@ -54,10 +56,13 @@ func (s *MethodEntity) AddDependency(importIndex int, element string) {
 
 func NewMethodEntity(res *ast.FuncDecl) *MethodEntity {
 	return &MethodEntity{
-		start:      res.Pos(),
-		end:        res.End(),
-		UsedFields: make(map[string]int),
-		IsPublic:   unicode.IsUpper(rune(res.Name.Name[0])),
+		start:             res.Pos(),
+		end:               res.End(),
+		Name:              res.Name.Name,
+		UsedFields:        make(map[string]int),
+		Dependencies:      make([]*DependencyEntity, 0),
+		DependenciesIndex: make(map[string]int),
+		IsPublic:          unicode.IsUpper(rune(res.Name.Name[0])),
 	}
 }
 
@@ -77,7 +82,8 @@ type StructEntity struct {
 	Fields      []*FieldEntity
 	FieldsIndex map[string]int
 
-	Methods      []*MethodEntity
+	Methods []*MethodEntity
+	// TODO: try to get rid of it
 	MethodsIndex map[string]int
 
 	Dependencies      []*DependencyEntity
@@ -120,8 +126,12 @@ func NewStructEntity(fset *token.FileSet, res *ast.StructType, isEmbedded bool, 
 	if !isEmbedded {
 		methods = []*MethodEntity{}
 		methodsIndex = make(map[string]int)
-		dependencies = make([]*DependencyEntity, 0, len(mapMetaData.usedPackages))
-		dependenciesIndex = make(map[string]int, len(mapMetaData.usedPackages))
+
+		// dependencies = make([]*DependencyEntity, 0, len(mapMetaData.usedPackages))
+		dependencies = make([]*DependencyEntity, 0)
+
+		// dependenciesIndex = make(map[string]int, len(mapMetaData.usedPackages))
+		dependenciesIndex = make(map[string]int)
 	}
 
 	return &StructEntity{
