@@ -13,7 +13,7 @@ type packageBuffer interface {
 	GetAndClearMethods(structName string) []*entity.MethodEntity
 }
 
-func (pa *packageActor) processFuncDecl(ctx context.Context, funcDecl *ast.FuncDecl) error {
+func (pa *packageActor) processFuncDecl(ctx context.Context, funcDecl *ast.FuncDecl, fileName string) error {
 	if funcDecl.Recv == nil {
 		return nil
 	}
@@ -42,7 +42,7 @@ func (pa *packageActor) processFuncDecl(ctx context.Context, funcDecl *ast.FuncD
 				}
 
 				if ident.Name != receiver.Name {
-					if index := pa.cache.GetImportIndex(ident.Name); index >= 0 {
+					if index := pa.cache.GetImportIndex(fileName, ident.Name); index >= 0 {
 						newMethod.AddDependency(index, expr.Sel.Name)
 					}
 				}

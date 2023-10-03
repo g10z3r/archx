@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 	"log"
+	"path"
 	"sync"
 
 	"github.com/g10z3r/archx/internal/domain/entity"
@@ -16,8 +17,8 @@ import (
 type packageCache interface {
 	CheckImport(b []byte) (bool, error)
 	AddImport(_import *entity.ImportEntity)
-	AddImportIndex(_import *entity.ImportEntity, index int)
-	GetImportIndex(importAlias string) int
+	AddImportAlias(_import *entity.ImportEntity, index int)
+	GetImportIndex(fileName, alias string) int
 	GetImports() []string
 	CheckSideEffectImport(b []byte) (bool, error)
 	AddSideEffectImport(_import *entity.ImportEntity)
@@ -52,11 +53,11 @@ func (pa *packageActor) ScanFile(ctx context.Context, fileName string, file *ast
 	for _, decl := range file.Decls {
 		switch d := decl.(type) {
 		case *ast.GenDecl:
-			if err := pa.processGenDecl(ctx, d); err != nil {
+			if err := pa.processGenDecl(ctx, d, fileName); err != nil {
 				log.Fatal(err)
 			}
 		case *ast.FuncDecl:
-			if err := pa.processFuncDecl(ctx, d); err != nil {
+			if err := pa.processFuncDecl(ctx, d, fileName); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -126,6 +127,7 @@ func (pa *packageActor) processImport(ctx context.Context, _import *entity.Impor
 	}
 
 	if !contains {
+		//  TODO: save to DB in the end, not one by one
 		if err := pa.db.ImportAcc().Append(ctx, _import, pa.pkg.Path); err != nil {
 			return err
 		}
@@ -134,10 +136,10 @@ func (pa *packageActor) processImport(ctx context.Context, _import *entity.Impor
 		return nil
 	}
 
-	if index := pa.cache.GetImportIndex(_import.Alias); index < 0 {
+	if index := pa.cache.GetImportIndex(_import.File, getAlias(_import)); index < 0 {
 		for i, imp := range pa.cache.GetImports() {
 			if imp == _import.Path {
-				pa.cache.AddImportIndex(_import, i)
+				pa.cache.AddImportAlias(_import, i)
 			}
 		}
 	}
@@ -145,16 +147,24 @@ func (pa *packageActor) processImport(ctx context.Context, _import *entity.Impor
 	return nil
 }
 
+func getAlias(_import *entity.ImportEntity) string {
+	if _import.WithAlias {
+		return _import.Alias
+	}
+
+	return path.Base(_import.Path)
+}
+
 func fetchPackageImports(files map[string]*ast.File) ([]*entity.ImportEntity, int) {
 	var impTotal int
 	var imports []*entity.ImportEntity
 
-	for _, file := range files {
+	for fileName, file := range files {
 		impTotal = impTotal + len(file.Imports)
 
 		for _, imp := range file.Imports {
 			if imp.Path != nil && imp.Path.Value != "" {
-				imports = append(imports, entity.NewImportEntity(imp))
+				imports = append(imports, entity.NewImportEntity(fileName, imp))
 			}
 		}
 	}

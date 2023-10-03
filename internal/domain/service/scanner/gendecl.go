@@ -9,7 +9,7 @@ import (
 	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
-func (pa *packageActor) processGenDecl(ctx context.Context, genDecl *ast.GenDecl) error {
+func (pa *packageActor) processGenDecl(ctx context.Context, genDecl *ast.GenDecl, fileName string) error {
 	if genDecl.Tok != token.TYPE {
 		return nil
 	}
@@ -26,6 +26,7 @@ func (pa *packageActor) processGenDecl(ctx context.Context, genDecl *ast.GenDecl
 				typeSpec:   typeSpec,
 				structType: t,
 				structName: typeSpec.Name.Name,
+				fileName:   fileName,
 			})
 		}
 
@@ -37,8 +38,8 @@ func (pa *packageActor) processGenDecl(ctx context.Context, genDecl *ast.GenDecl
 type structProcessingParams struct {
 	typeSpec   *ast.TypeSpec
 	structType *ast.StructType
-	// pkgPath    string
 	structName string
+	fileName   string
 }
 
 func (pa *packageActor) processStructType(ctx context.Context, params *structProcessingParams) error {
@@ -48,7 +49,7 @@ func (pa *packageActor) processStructType(ctx context.Context, params *structPro
 	}
 
 	for _, pkg := range usedPackages {
-		if index := pa.cache.GetImportIndex(pkg.Alias); index >= 0 {
+		if index := pa.cache.GetImportIndex(params.fileName, pkg.Alias); index >= 0 {
 			structEntity.AddDependency(index, pkg.Element)
 		}
 	}

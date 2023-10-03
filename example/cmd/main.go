@@ -3,7 +3,7 @@ package main
 import (
 	_ "github.com/g10z3r/archx/example/internal/api"
 	"github.com/g10z3r/archx/example/internal/data"
-	apiWithAlias "github.com/g10z3r/archx/example/internal/data/api"
+	api2WithAnotherAlias "github.com/g10z3r/archx/example/internal/data/api"
 )
 
 // type Go interface {
@@ -41,7 +41,7 @@ type Person struct {
 	FirstName,
 	LastName string
 	Age     int
-	test    apiWithAlias.Api2
+	test    api2WithAnotherAlias.Api2
 	Address Address
 	Info    data.PersonalInfo
 	// Transport Transport

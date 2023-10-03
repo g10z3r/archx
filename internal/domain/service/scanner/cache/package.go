@@ -19,7 +19,7 @@ type packageCache struct {
 	sideEffectImports bloom.BloomFilter
 
 	Imports      []string
-	ImportsIndex map[string]int
+	ImportsIndex map[string]map[string]int
 
 	StructsIndex map[string]int
 }
@@ -88,14 +88,19 @@ func (pc *packageCache) AddImport(_import *entity.ImportEntity) {
 	pc.importsFilter.Put([]byte(_import.Path))
 
 	pc.Imports = append(pc.Imports, _import.Path)
-	pc.ImportsIndex[getAlias(_import)] = len(pc.Imports)
+
+	if _, exists := pc.ImportsIndex[_import.File]; !exists {
+		pc.ImportsIndex[_import.File] = make(map[string]int)
+	}
+
+	pc.ImportsIndex[_import.File][getAlias(_import)] = len(pc.Imports) - 1
 }
 
-func (pc *packageCache) AddImportIndex(_import *entity.ImportEntity, index int) {
+func (pc *packageCache) AddImportAlias(_import *entity.ImportEntity, index int) {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
 
-	pc.ImportsIndex[getAlias(_import)] = index
+	pc.ImportsIndex[_import.File][getAlias(_import)] = index
 }
 
 func getAlias(_import *entity.ImportEntity) string {
@@ -106,11 +111,11 @@ func getAlias(_import *entity.ImportEntity) string {
 	return path.Base(_import.Path)
 }
 
-func (pc *packageCache) GetImportIndex(importAlias string) int {
+func (pc *packageCache) GetImportIndex(fileName, alias string) int {
 	pc.mu.RLock()
 	defer pc.mu.RUnlock()
 
-	index, exists := pc.ImportsIndex[importAlias]
+	index, exists := pc.ImportsIndex[fileName][alias]
 	if !exists {
 		return -1
 	}
@@ -129,7 +134,7 @@ func NewPackageCache(cfg bloom.FilterConfig) *packageCache {
 		importsFilter:     bloom.NewBloomFilter(m),
 		sideEffectImports: bloom.NewBloomFilter(m),
 		Imports:           make([]string, 0, cfg.ExpectedItemCount),
-		ImportsIndex:      make(map[string]int, cfg.ExpectedItemCount),
+		ImportsIndex:      make(map[string]map[string]int),
 		StructsIndex:      make(map[string]int),
 	}
 }
