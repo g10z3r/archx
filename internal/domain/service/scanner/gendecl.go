@@ -4,7 +4,6 @@ import (
 	"context"
 	"go/ast"
 	"go/token"
-	"log"
 
 	"github.com/g10z3r/archx/internal/domain/entity"
 )
@@ -57,22 +56,25 @@ func (pa *packageActor) processStructType(ctx context.Context, params *structPro
 	pa.mu.Lock()
 	defer pa.mu.Unlock()
 
-	if index := pa.cache.GetStructIndex(params.structName); index < 0 {
-		// sync with buffer
-		for _, method := range pa.buf.GetAndClearMethods(params.structName) {
-			structEntity.AddMethod(method, method.Name)
-			log.Printf("Syncing method %s", method.Name)
+	// Synchronizing methods from the buffer that have already been found and are awaiting their structure
+	for _, method := range pa.buf.GetAndClearMethods(params.structName) {
+		structEntity.AddMethod(method, method.Name)
 
-			depsLen := len(structEntity.DependenciesIndex)
-			for dep, i := range method.DependenciesIndex {
-				structEntity.Dependencies = append(structEntity.Dependencies, method.Dependencies[i])
-				structEntity.DependenciesIndex[dep] = depsLen + i
+		depsLen := len(structEntity.DependenciesIndex)
+		for dep, i := range method.DependenciesIndex {
+			// When a dependency already exists in structure dependencies,
+			// just increase the usage counter for this dependency
+			if j, exists := structEntity.DependenciesIndex[dep]; exists {
+				structEntity.Dependencies[j].Usage++
+				continue
 			}
-		}
 
-		index := pa.cache.AddStructIndex(params.structName)
-		return pa.db.StructAcc().Append(ctx, structEntity, index, pa.pkg.Path)
+			// This is a new addiction that has never been seen before
+			structEntity.Dependencies = append(structEntity.Dependencies, method.Dependencies[i])
+			structEntity.DependenciesIndex[dep] = depsLen + i
+		}
 	}
 
-	return nil
+	index := pa.cache.AddStructIndex(params.structName)
+	return pa.db.StructAcc().Append(ctx, structEntity, index, pa.pkg.Path)
 }

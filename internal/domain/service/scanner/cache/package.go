@@ -2,7 +2,6 @@ package cache
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"path"
 	"sync"
@@ -44,7 +43,6 @@ func (pc *packageCache) AddStructIndex(structName string) int {
 
 	index := len(pc.StructsIndex)
 	pc.StructsIndex[structName] = index
-	fmt.Println("Saved to cache", structName, index)
 	return index
 }
 
@@ -86,7 +84,6 @@ func (pc *packageCache) AddImport(_import *entity.ImportEntity) {
 	defer pc.mu.Unlock()
 
 	pc.importsFilter.Put([]byte(_import.Path))
-
 	pc.Imports = append(pc.Imports, _import.Path)
 
 	if _, exists := pc.ImportsIndex[_import.File]; !exists {
@@ -99,6 +96,10 @@ func (pc *packageCache) AddImport(_import *entity.ImportEntity) {
 func (pc *packageCache) AddImportAlias(_import *entity.ImportEntity, index int) {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
+
+	if _, exists := pc.ImportsIndex[_import.File]; !exists {
+		pc.ImportsIndex[_import.File] = make(map[string]int)
+	}
 
 	pc.ImportsIndex[_import.File][getAlias(_import)] = index
 }

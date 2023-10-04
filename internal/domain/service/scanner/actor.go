@@ -101,7 +101,9 @@ type pkgImportData struct {
 }
 
 func (pa *packageActor) processImport(ctx context.Context, _import *entity.ImportEntity, modName string) error {
-	_import.Trim(modName)
+	if internal := _import.CheckAndTrim(modName); !internal {
+		return nil
+	}
 
 	if isSideEffectImport(_import) {
 		contains, err := pa.cache.CheckSideEffectImport([]byte(_import.Path))

@@ -4,6 +4,7 @@ import (
 	_ "github.com/g10z3r/archx/example/internal/api"
 	"github.com/g10z3r/archx/example/internal/data"
 	api2WithAnotherAlias "github.com/g10z3r/archx/example/internal/data/api"
+	"github.com/g10z3r/archx/example/internal/metadata"
 )
 
 // type Go interface {
@@ -31,6 +32,16 @@ func (p *Person) ChangeFirstName(newFirstName string) *Person {
 	return p
 }
 
+func (p *Person) ChangeLastName(newLastName string) *Person {
+
+	metadata.MetadataSome()
+	if newLastName != p.LastName {
+		p.LastName = newLastName
+	}
+
+	return p
+}
+
 type Address struct {
 	street, city string
 	state        string
@@ -51,13 +62,3 @@ type Person struct {
 		Speed        float32
 	}
 }
-
-// func (p *Person) ChangeLastName(newLastName string) *Person {
-// 	os.Getenv("TEST")
-// 	metadata.MetadataSome()
-// 	if newLastName != p.LastName {
-// 		p.LastName = newLastName
-// 	}
-
-// 	return p
-// }

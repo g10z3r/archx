@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"log"
+	"path/filepath"
 	"sync"
 
 	"github.com/g10z3r/archx/internal/domain/repository"
@@ -72,7 +73,7 @@ func (s *Scanner) Perform(ctx context.Context, dirPath string, basePath string) 
 					log.Fatal(err)
 				}
 
-			}(file, fileName)
+			}(file, filepath.Base(fileName))
 		}
 
 		pkgWaitGroup.Wait()

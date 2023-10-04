@@ -13,12 +13,17 @@ type ImportEntity struct {
 	WithAlias bool
 }
 
-func (e *ImportEntity) Trim(basePath string) {
-	if !strings.HasSuffix(basePath, "/") {
-		basePath += "/"
+func (e *ImportEntity) CheckAndTrim(modName string) bool {
+	if len(e.Path) < len(modName) {
+		return false
 	}
 
-	e.Path = "/" + strings.TrimPrefix(e.Path, basePath)
+	if !strings.HasPrefix(e.Path, modName) {
+		return false
+	}
+
+	e.Path = e.Path[len(modName):]
+	return true
 }
 
 func NewImportEntity(fileName string, importSpec *ast.ImportSpec) *ImportEntity {
