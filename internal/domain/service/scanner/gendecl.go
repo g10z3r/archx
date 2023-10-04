@@ -69,7 +69,7 @@ func (pa *packageActor) processStructType(ctx context.Context, params *structPro
 				continue
 			}
 
-			// This is a new addiction that has never been seen before
+			// This is a new dependency that has never been seen before
 			structEntity.Dependencies = append(structEntity.Dependencies, method.Dependencies[i])
 			structEntity.DependenciesIndex[dep] = depsLen + i
 		}
