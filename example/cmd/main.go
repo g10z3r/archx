@@ -3,7 +3,8 @@ package main
 import (
 	_ "github.com/g10z3r/archx/example/internal/api"
 	"github.com/g10z3r/archx/example/internal/data"
-	"github.com/g10z3r/archx/example/internal/data/api"
+	api2WithAnotherAlias "github.com/g10z3r/archx/example/internal/data/api"
+	"github.com/g10z3r/archx/example/internal/metadata"
 )
 
 // type Go interface {
@@ -20,18 +21,38 @@ import (
 // 	Go
 // }
 
+func (p *Person) ChangeFirstName(newFirstName string) *Person {
+	pi := data.PersonalInfo{}
+	pi.TestMethod()
+
+	if newFirstName != p.FirstName {
+		p.FirstName = newFirstName
+	}
+
+	return p
+}
+
+func (p *Person) ChangeLastName(newLastName string) *Person {
+
+	metadata.MetadataSome()
+	if newLastName != p.LastName {
+		p.LastName = newLastName
+	}
+
+	return p
+}
+
 type Address struct {
-	street string
-	city   string
-	state  string
-	zip    string
+	street, city string
+	state        string
+	zip          string
 }
 
 type Person struct {
 	FirstName,
 	LastName string
 	Age     int
-	test    api.Api2
+	test    api2WithAnotherAlias.Api2
 	Address Address
 	Info    data.PersonalInfo
 	// Transport Transport
@@ -41,24 +62,3 @@ type Person struct {
 		Speed        float32
 	}
 }
-
-// func (p *Person) ChangeFirstName(newFirstName string) *Person {
-// 	pi := data.PersonalInfo{}
-// 	pi.TestMethod()
-
-// 	if newFirstName != p.FirstName {
-// 		p.FirstName = newFirstName
-// 	}
-
-// 	return p
-// }
-
-// func (p *Person) ChangeLastName(newLastName string) *Person {
-// 	os.Getenv("TEST")
-// 	metadata.MetadataSome()
-// 	if newLastName != p.LastName {
-// 		p.LastName = newLastName
-// 	}
-
-// 	return p
-// }
