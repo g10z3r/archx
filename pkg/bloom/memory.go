@@ -2,6 +2,7 @@ package bloom
 
 import (
 	"math"
+	"sync/atomic"
 )
 
 type memoryBloomFilter struct {
@@ -16,7 +17,14 @@ func (filter *memoryBloomFilter) Put(b []byte) error {
 		idx := val % filter.len
 		bitIdx := idx % 64
 		arrayIdx := idx / 64
-		filter.bits[arrayIdx] |= 1 << bitIdx
+
+		for {
+			oldVal := filter.bits[arrayIdx]
+			newVal := oldVal | (1 << bitIdx)
+			if atomic.CompareAndSwapUint64(&filter.bits[arrayIdx], oldVal, newVal) {
+				break
+			}
+		}
 	}
 	return nil
 }
@@ -27,7 +35,9 @@ func (filter *memoryBloomFilter) MightContain(b []byte) (bool, error) {
 		idx := val % filter.len
 		bitIdx := idx % 64
 		arrayIdx := idx / 64
-		if filter.bits[arrayIdx]&(1<<bitIdx) == 0 {
+
+		valAtIdx := atomic.LoadUint64(&filter.bits[arrayIdx])
+		if valAtIdx&(1<<bitIdx) == 0 {
 			return false, nil
 		}
 	}
