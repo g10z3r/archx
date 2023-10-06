@@ -127,3 +127,45 @@ func TestConcurrentAccess(t *testing.T) {
 		}
 	})
 }
+
+func TestCalcFilterParams(t *testing.T) {
+	t.Run("Valid with K 3", func(t *testing.T) {
+		m, k := CalcFilterParams(5000, 0.1)
+		expectedM := uint64(24000)
+		expectedK := 3
+
+		if m != expectedM || k != expectedK {
+			t.Errorf("got (%d, %d), expected (%d, %d)", m, k, expectedM, expectedK)
+		}
+	})
+	t.Run("Valid with K 7", func(t *testing.T) {
+		m, k := CalcFilterParams(1000, 0.01)
+		expectedM := uint64(9600)
+		expectedK := 7
+
+		if m != expectedM || k != expectedK {
+			t.Errorf("got (%d, %d), expected (%d, %d)", m, k, expectedM, expectedK)
+		}
+	})
+
+	t.Run("Zero items", func(t *testing.T) {
+		m, k := CalcFilterParams(0, 0.01)
+		if m != 0 || k != 0 {
+			t.Errorf("got (%d, %d), expected (0, 0)", m, k)
+		}
+	})
+
+	t.Run("Invalid probability low", func(t *testing.T) {
+		m, k := CalcFilterParams(1000, -0.01)
+		if m != 0 || k != 0 {
+			t.Errorf("got (%d, %d), expected (0, 0)", m, k)
+		}
+	})
+
+	t.Run("Invalid probability high", func(t *testing.T) {
+		m, k := CalcFilterParams(1000, 1.5)
+		if m != 0 || k != 0 {
+			t.Errorf("got (%d, %d), expected (0, 0)", m, k)
+		}
+	})
+}

@@ -61,21 +61,15 @@ type FilterConfig struct {
 	DesiredFalsePositiveRate float64
 }
 
-// Calculates the optimal size and number of hash functions
-// for a Bloom Filter given the expected number of items and the desired
-// false positive probability.
-func CalculateFilterParams(n uint64, p float64) (m uint64, k int) {
+func CalcFilterParams(n uint64, p float64) (uint64, int) {
 	if n == 0 || p <= 0 || p >= 1 {
 		return 0, 0
 	}
 
-	// Calculate optimal size m of the bloom filter
-	m = uint64(-float64(n) * math.Log(p) / math.Pow(math.Log(2), 2))
+	m := uint64(-float64(n) * math.Log(p) / math.Pow(math.Log(2), 2))
+	k := int(math.Round(math.Log(2) * float64(m) / float64(n)))
 
-	// Calculate optimal number of hash functions k
-	k = int(math.Round(math.Log(2) * float64(m) / float64(n)))
-
-	// Ensure that m is rounded up to the nearest multiple of 64
+	// Round up m to the nearest multiple of 64 using bitwise operation
 	remainder := m % 64
 	if remainder != 0 {
 		m += 64 - remainder
