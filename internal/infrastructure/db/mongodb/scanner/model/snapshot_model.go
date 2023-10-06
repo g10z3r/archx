@@ -5,17 +5,13 @@ import (
 )
 
 type SnapshotDAO struct {
-	Timestamp     int64          `bson:"timestamp"`
-	BasePath      string         `bson:"basePath"`
-	Packages      []PackageDAO   `bson:"packages"`
-	PackagesIndex map[string]int `bson:"packagesIndex"`
+	Timestamp int64  `bson:"timestamp"`
+	BasePath  string `bson:"basePath"`
 }
 
 func MapSnapshotEntity(e *entity.SnapshotEntity) *SnapshotDAO {
 	return &SnapshotDAO{
-		Timestamp:     e.Timestamp,
-		BasePath:      e.BasePath,
-		Packages:      make([]PackageDAO, 0),
-		PackagesIndex: make(map[string]int),
+		Timestamp: e.Timestamp,
+		BasePath:  e.BasePath,
 	}
 }

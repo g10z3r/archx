@@ -6,8 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/g10z3r/archx/internal/domain/service/scanner"
-	mongoScannerRepo "github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner"
+	"github.com/g10z3r/archx/internal/domain/service/anthill"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -29,10 +28,13 @@ func main() {
 
 	fmt.Println("Successfully connected to MongoDB!")
 
-	db := client.Database("archant")
-	collection := db.Collection("someproject")
+	// db := client.Database("archant")
+	// collection := db.Collection("someproject")
 
-	scanRepo := mongoScannerRepo.NewSnapshotRepository(collection)
-	scanService := scanner.NewScanner(scanRepo)
-	scanService.Perform(ctx, "example/cmd", "github.com/g10z3r/archx")
+	// scanRepo := mongoScannerRepo.NewSnapshotRepository(collection)
+
+	// scanService.Perform(ctx, "example/cmd", "github.com/g10z3r/archx")
+
+	colony := anthill.NewColony(*anthill.DefaultConfig())
+	colony.Explore(".")
 }
