@@ -1,29 +1,42 @@
 package anthill
 
 import (
-	"context"
+	"errors"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 
+	"github.com/g10z3r/archx/internal/domain/entity"
 	"golang.org/x/mod/modfile"
 )
 
 const goModFileName = "go.mod"
 const goFileExt = ".go"
 
-type Colony struct {
-	zone      []string
-	mod       string
+type Metadata struct {
+	modName   string
 	goVersion string
-	config    Config
 }
 
-func NewColony(cfg Config) *Colony {
+type Colony struct {
+	mu sync.Mutex
+
+	snapshot *entity.SnapshotEntity
+	packages []string
+
+	metadata *Metadata
+	config   *Config
+}
+
+func SpawnColony(cfg *Config) *Colony {
 	return &Colony{
-		config: cfg,
+		config:   cfg,
+		metadata: &Metadata{},
 	}
 }
 
@@ -39,7 +52,11 @@ func (c *Colony) Explore(root string) error {
 	}
 
 	if goFilesExist {
-		c.zone = append(c.zone, root)
+		if !strings.HasPrefix(root, c.config.selectedDir) {
+			return nil
+		}
+
+		c.packages = append(c.packages, root)
 		return nil
 	}
 
@@ -59,7 +76,7 @@ func (c *Colony) scanDirectory(entries []os.DirEntry, root string) ([]string, bo
 			continue
 		}
 
-		if entry.Name() == goModFileName && len(c.goVersion) < 1 {
+		if entry.Name() == goModFileName && len(c.metadata.goVersion) < 1 {
 			if err := c.processGoModFile(root); err != nil {
 				return nil, false, err
 			}
@@ -84,22 +101,6 @@ func (c *Colony) exploreSubdirectories(subdirs []string) error {
 	return nil
 }
 
-func (s *Colony) Perform(ctx context.Context, dirPath string, basePath string) {
-
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, dirPath, nil, parser.AllErrors)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, pkg := range pkgs {
-
-		thread := newForager(fset)
-		thread.process(pkg, basePath)
-
-	}
-}
-
 func (c *Colony) processGoModFile(root string) error {
 	goModPath := filepath.Join(root, goModFileName)
 	content, err := os.ReadFile(goModPath)
@@ -112,12 +113,51 @@ func (c *Colony) processGoModFile(root string) error {
 		return err
 	}
 
-	c.mod = modFileData.Module.Mod.Path
-	c.goVersion = modFileData.Go.Version
+	c.metadata.modName = modFileData.Module.Mod.Path
+	c.metadata.goVersion = modFileData.Go.Version
 
 	return nil
 }
 
-func (c *Colony) processEntries() {
+func (c *Colony) Forage() (*entity.SnapshotEntity, error) {
+	if len(c.metadata.modName) < 1 || len(c.metadata.goVersion) < 1 {
+		return nil, errors.New("couldn't find the go.mod file")
+	}
 
+	c.snapshot = entity.NewSnapshotEntity(c.metadata.modName, len(c.packages))
+
+	for _, dir := range c.packages {
+		if err := c.scanPackages(dir); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return c.snapshot, nil
+}
+
+func (c *Colony) scanPackages(dirPath string) error {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, dirPath, nil, parser.AllErrors)
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	for _, pkg := range pkgs {
+		wg.Add(1)
+		go func(pkg *ast.Package) {
+			forager := newForager(fset)
+			pkgEntity := forager.process(pkg, dirPath, c.metadata.modName)
+
+			c.mu.Lock()
+			c.snapshot.Packages = append(c.snapshot.Packages, pkgEntity)
+			c.mu.Unlock()
+
+			wg.Done()
+		}(pkg)
+	}
+
+	wg.Wait()
+
+	return nil
 }

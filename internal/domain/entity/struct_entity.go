@@ -28,8 +28,8 @@ type FieldEntity struct {
 }
 
 type MethodEntity struct {
-	start token.Pos
-	end   token.Pos
+	Start token.Pos
+	End   token.Pos
 
 	Name         string
 	ParentStruct string
@@ -57,8 +57,8 @@ func (s *MethodEntity) AddDependency(importIndex int, element string) {
 
 func NewMethodEntity(res *ast.FuncDecl, parentStructName string) *MethodEntity {
 	return &MethodEntity{
-		start:             res.Pos(),
-		end:               res.End(),
+		Start:             res.Pos(),
+		End:               res.End(),
 		Name:              res.Name.Name,
 		ParentStruct:      parentStructName,
 		UsedFields:        make(map[string]int),

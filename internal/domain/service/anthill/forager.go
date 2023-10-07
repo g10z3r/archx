@@ -1,8 +1,6 @@
 package anthill
 
 import (
-	"encoding/json"
-	"fmt"
 	"go/ast"
 	"go/token"
 	"log"
@@ -44,22 +42,27 @@ func newForager(fset *token.FileSet) *forager {
 	}
 }
 
-func (f *forager) process(pkg *ast.Package, modName string) {
+func (f *forager) process(pkg *ast.Package, pkgPath, modName string) *entity.PackageEntity {
+	pkgEntity := entity.NewPackageEntity(pkgPath, pkg.Name)
 	head := f.processHead(pkg.Files, modName)
+
+	pkgEntity.Imports = append(pkgEntity.Imports, head.RegularImports...)
+	pkgEntity.SideEffectImports = append(pkgEntity.SideEffectImports, head.SideEffectImports...)
 
 	f.processBody(pkg.Files, head)
 	f.frozen = true
 
-	f.storage.methodBucket.Range(func(key string, value []*entity.MethodEntity) bool {
-		fmt.Println(key)
-		for _, v := range value {
-
-			jsonData, _ := json.Marshal(v)
-
-			fmt.Println(string(jsonData))
-		}
+	f.storage.structBucket.Range(func(key string, shard []*entity.StructEntity) bool {
+		pkgEntity.Structs = append(pkgEntity.Structs, shard...)
 		return true
 	})
+
+	f.storage.methodBucket.Range(func(key string, shard []*entity.MethodEntity) bool {
+		pkgEntity.Methods = append(pkgEntity.Methods, shard...)
+		return true
+	})
+
+	return pkgEntity
 }
 
 type headDTO struct {

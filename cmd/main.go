@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -32,9 +33,18 @@ func main() {
 	// collection := db.Collection("someproject")
 
 	// scanRepo := mongoScannerRepo.NewSnapshotRepository(collection)
-
 	// scanService.Perform(ctx, "example/cmd", "github.com/g10z3r/archx")
 
-	colony := anthill.NewColony(*anthill.DefaultConfig())
+	colony := anthill.SpawnColony(anthill.DefaultConfig(
+	// anthill.WithSelectedDir("example/cmd"),
+	))
+
 	colony.Explore(".")
+	snap, err := colony.Forage()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	jsonData, _ := json.Marshal(snap)
+	fmt.Println(string(jsonData))
 }

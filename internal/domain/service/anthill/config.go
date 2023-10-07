@@ -11,6 +11,7 @@ var ignoredMap = map[string]struct{}{
 	".eclipse": {},
 
 	"dist":    {},
+	"docker":  {},
 	"assets":  {},
 	"vendor":  {},
 	"build":   {},
@@ -25,6 +26,7 @@ type ConfigOption func(*Config)
 type Config struct {
 	ignoredList map[string]struct{}
 	timeout     time.Duration
+	selectedDir string
 }
 
 func WithIgnoredList(list ...string) ConfigOption {
@@ -38,6 +40,12 @@ func WithIgnoredList(list ...string) ConfigOption {
 func WithTimeout(timeout time.Duration) ConfigOption {
 	return func(c *Config) {
 		c.timeout = timeout
+	}
+}
+
+func WithSelectedDir(dir string) ConfigOption {
+	return func(c *Config) {
+		c.selectedDir = dir
 	}
 }
 

@@ -21,6 +21,27 @@ import (
 // 	Go
 // }
 
+type Address struct {
+	street, city string
+	state        string
+	zip          string
+}
+
+type Person struct {
+	FirstName,
+	LastName string
+
+	Age     int
+	test    api2WithAnotherAlias.Api2
+	Address Address
+	Info    data.PersonalInfo
+	Skill   struct {
+		Intelligence float32
+		Info2        data.PersonalInfo
+		Speed        float32
+	}
+}
+
 func (p *Person) ChangeFirstName(newFirstName string) *Person {
 	pi := data.PersonalInfo{}
 	pi.TestMethod()
@@ -40,25 +61,4 @@ func (p *Person) ChangeLastName(newLastName string) *Person {
 	}
 
 	return p
-}
-
-type Address struct {
-	street, city string
-	state        string
-	zip          string
-}
-
-type Person struct {
-	FirstName,
-	LastName string
-	Age     int
-	test    api2WithAnotherAlias.Api2
-	Address Address
-	Info    data.PersonalInfo
-	// Transport Transport
-	Skill struct {
-		Intelligence float32
-		Info2        data.PersonalInfo
-		Speed        float32
-	}
 }

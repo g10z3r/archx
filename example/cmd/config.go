@@ -6,7 +6,7 @@ import (
 	api2 "github.com/g10z3r/archx/example/internal/data/api"
 )
 
-type Test struct {
+type Test[T any] struct {
 	Field1 api2WithAnotherAlias.PersonalInfo
 	Field2 api2.Api2
 	Api    api.ApitestStruct
