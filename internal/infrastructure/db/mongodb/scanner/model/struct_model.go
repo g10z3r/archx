@@ -30,12 +30,12 @@ type StructDAO struct {
 	DependenciesIndex map[string]int   `bson:"dependenciesIndex"`
 }
 
-func MapMethodEntity(e *entity.MethodEntity) *MethodDAO {
-	return &MethodDAO{
-		UsedFields: e.UsedFields,
-		IsPublic:   e.IsPublic,
-	}
-}
+// func MapMethodEntity(e *entity.MethodEntity) *MethodDAO {
+// 	return &MethodDAO{
+// 		UsedFields: e.UsedFields,
+// 		IsPublic:   e.Visibility,
+// 	}
+// }
 
 func MapStructEntity(e *entity.StructEntity) *StructDAO {
 	fields := make([]*FieldDAO, 0, len(e.Fields))
@@ -71,16 +71,16 @@ func mapFieldEntity(e *entity.FieldEntity) *FieldDAO {
 	return &FieldDAO{
 		Type:     e.Type,
 		Embedded: embedded,
-		IsPublic: e.IsPublic,
+		IsPublic: e.Visibility,
 	}
 }
 
-func mapMethodEntity(e *entity.MethodEntity) *MethodDAO {
-	return &MethodDAO{
-		UsedFields: e.UsedFields,
-		IsPublic:   e.IsPublic,
-	}
-}
+// func mapMethodEntity(e *entity.MethodEntity) *MethodDAO {
+// 	return &MethodDAO{
+// 		UsedFields: e.UsedFields,
+// 		IsPublic:   e.Visibility,
+// 	}
+// }
 
 func mapDependencyEntity(e *entity.DependencyEntity) *DependencyDAO {
 	return &DependencyDAO{
