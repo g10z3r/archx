@@ -12,12 +12,12 @@ import (
 const (
 	Embedded    = true
 	NotEmbedded = false
-
-	onlyPreinitialized = false
 )
 
 type FieldEntity struct {
 	_ [0]int
+
+	Name string
 
 	start token.Pos
 	end   token.Pos
@@ -28,43 +28,40 @@ type FieldEntity struct {
 }
 
 type MethodEntity struct {
-	Start token.Pos
-	End   token.Pos
+	start token.Pos
+	end   token.Pos
 
 	Name         string
 	ParentStruct string
 
-	Dependencies      []*DependencyEntity
-	DependenciesIndex map[string]int
+	Dependencies map[string]*DependencyEntity
 
 	UsedFields map[string]int
 	IsPublic   bool
 }
 
 func (s *MethodEntity) AddDependency(importIndex int, element string) {
-	if index, exists := s.DependenciesIndex[element]; exists {
-		s.Dependencies[index].ImportIndex = importIndex
-		s.Dependencies[index].Usage++
-	} else {
-		dep := &DependencyEntity{
+	if _, exists := s.Dependencies[element]; !exists {
+		s.Dependencies[element] = &DependencyEntity{
 			ImportIndex: importIndex,
 			Usage:       1,
 		}
-		s.Dependencies = append(s.Dependencies, dep)
-		s.DependenciesIndex[element] = len(s.Dependencies) - 1
+
+		return
 	}
+
+	s.Dependencies[element].Usage++
 }
 
 func NewMethodEntity(res *ast.FuncDecl, parentStructName string) *MethodEntity {
 	return &MethodEntity{
-		Start:             res.Pos(),
-		End:               res.End(),
-		Name:              res.Name.Name,
-		ParentStruct:      parentStructName,
-		UsedFields:        make(map[string]int),
-		Dependencies:      make([]*DependencyEntity, 0),
-		DependenciesIndex: make(map[string]int),
-		IsPublic:          unicode.IsUpper(rune(res.Name.Name[0])),
+		start:        res.Pos(),
+		end:          res.End(),
+		Name:         res.Name.Name,
+		ParentStruct: parentStructName,
+		UsedFields:   make(map[string]int),
+		Dependencies: make(map[string]*DependencyEntity),
+		IsPublic:     unicode.IsUpper(rune(res.Name.Name[0])),
 	}
 }
 
@@ -74,44 +71,26 @@ type DependencyEntity struct {
 }
 
 type StructEntity struct {
-	_ [0]int
-
-	Name *string
-
-	start token.Pos
-	end   token.Pos
-
-	Fields      []*FieldEntity
-	FieldsIndex map[string]int
-
-	Methods []*MethodEntity
-	// TODO: try to get rid of it
-	MethodsIndex map[string]int
-
-	Dependencies      []*DependencyEntity
-	DependenciesIndex map[string]int
-
-	isIncompleted bool
-	isEmbedded    bool
+	_            [0]int
+	start        token.Pos
+	end          token.Pos
+	Name         *string
+	Fields       []*FieldEntity
+	Dependencies map[string]*DependencyEntity
+	isEmbedded   bool
 }
 
 func (s *StructEntity) AddDependency(importIndex int, element string) {
-	if index, exists := s.DependenciesIndex[element]; exists {
-		s.Dependencies[index].ImportIndex = importIndex
-		s.Dependencies[index].Usage++
-	} else {
-		dep := &DependencyEntity{
+	if _, exists := s.Dependencies[element]; !exists {
+		s.Dependencies[element] = &DependencyEntity{
 			ImportIndex: importIndex,
 			Usage:       1,
 		}
-		s.Dependencies = append(s.Dependencies, dep)
-		s.DependenciesIndex[element] = len(s.Dependencies) - 1
-	}
-}
 
-func (s *StructEntity) AddMethod(metdod *MethodEntity, name string) {
-	s.Methods = append(s.Methods, metdod)
-	s.MethodsIndex[name] = len(s.Methods) - 1
+		return
+	}
+
+	s.Dependencies[element].Usage++
 }
 
 func NewStructEntity(fset *token.FileSet, res *ast.StructType, isEmbedded bool, name *string) (*StructEntity, []UsedPackage, error) {
@@ -120,34 +99,18 @@ func NewStructEntity(fset *token.FileSet, res *ast.StructType, isEmbedded bool, 
 		return nil, nil, fmt.Errorf("failed to extract field map: %w", err)
 	}
 
-	var methods []*MethodEntity
-	var methodsIndex map[string]int
-	var dependencies []*DependencyEntity
-	var dependenciesIndex map[string]int
-
+	var dependencies map[string]*DependencyEntity
 	if !isEmbedded {
-		methods = []*MethodEntity{}
-		methodsIndex = make(map[string]int)
-
-		// dependencies = make([]*DependencyEntity, 0, len(mapMetaData.usedPackages))
-		dependencies = make([]*DependencyEntity, 0)
-
-		// dependenciesIndex = make(map[string]int, len(mapMetaData.usedPackages))
-		dependenciesIndex = make(map[string]int)
+		dependencies = make(map[string]*DependencyEntity, len(mapMetaData.usedPackages))
 	}
 
 	return &StructEntity{
-			Name:              name,
-			start:             res.Pos(),
-			end:               res.End(),
-			Fields:            mapMetaData.fieldsSet,
-			FieldsIndex:       mapMetaData.fieldsIndex,
-			Methods:           methods,
-			MethodsIndex:      methodsIndex,
-			Dependencies:      dependencies,
-			DependenciesIndex: dependenciesIndex,
-			isEmbedded:        isEmbedded,
-			isIncompleted:     true,
+			Name:         name,
+			start:        res.Pos(),
+			end:          res.End(),
+			Fields:       mapMetaData.fieldsSet,
+			Dependencies: dependencies,
+			isEmbedded:   isEmbedded,
 		},
 		mapMetaData.usedPackages,
 		nil
@@ -161,13 +124,11 @@ type UsedPackage struct {
 type fieldMapMetaData struct {
 	usedPackages []UsedPackage
 	fieldsSet    []*FieldEntity
-	fieldsIndex  map[string]int
 }
 
 func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMetaData, error) {
 	fields := make([]*FieldEntity, 0, len(fieldList))
-	fieldsIndex := make(map[string]int, len(fieldList))
-	usedPackages := []UsedPackage{}
+	usedPackages := make([]UsedPackage, 0, len(fieldList))
 
 	for _, field := range fieldList {
 		fieldMetaData, err := extractFieldType(fset, field.Type)
@@ -189,10 +150,10 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 		}
 
 		for _, name := range field.Names {
-			fieldsIndex[name.Name] = len(fields)
 			fields = append(fields, &FieldEntity{
 				start:    name.Pos(),
 				end:      name.End(),
+				Name:     name.Name,
 				Type:     fieldMetaData._type,
 				Embedded: fieldMetaData.embeddedStruct,
 				IsPublic: name.IsExported(),
@@ -203,7 +164,6 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 	return &fieldMapMetaData{
 		fieldsSet:    fields,
 		usedPackages: usedPackages,
-		fieldsIndex:  fieldsIndex,
 	}, nil
 }
 

@@ -43,22 +43,22 @@ func MapStructEntity(e *entity.StructEntity) *StructDAO {
 		fields = append(fields, mapFieldEntity(e.Fields[i]))
 	}
 
-	methods := make([]*MethodDAO, 0, len(e.Methods))
-	for i := 0; i < len(e.Methods); i++ {
-		methods = append(methods, mapMethodEntity(e.Methods[i]))
-	}
+	// methods := make([]*MethodDAO, 0, len(e.Methods))
+	// for i := 0; i < len(e.Methods); i++ {
+	// 	methods = append(methods, mapMethodEntity(e.Methods[i]))
+	// }
 
-	deps := make([]*DependencyDAO, 0, len(e.Dependencies))
-	for i := 0; i < len(e.Dependencies); i++ {
-		deps = append(deps, mapDependencyEntity(e.Dependencies[i]))
-	}
+	// deps := make([]*DependencyDAO, 0, len(e.Dependencies))
+	// for i := 0; i < len(e.Dependencies); i++ {
+	// 	deps = append(deps, mapDependencyEntity(e.Dependencies[i]))
+	// }
 
 	return &StructDAO{
-		Fields:            fields,
-		FieldsIndex:       e.FieldsIndex,
-		Methods:           methods,
-		Dependencies:      deps,
-		DependenciesIndex: e.DependenciesIndex,
+		Fields: fields,
+		// FieldsIndex: e.FieldsIndex,
+		// Methods:           methods,
+		// Dependencies: deps,
+		// DependenciesIndex: e.DependenciesIndex,
 	}
 }
 

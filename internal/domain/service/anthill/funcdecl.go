@@ -32,6 +32,8 @@ func (f *forager) processFuncDecl(funcDecl *ast.FuncDecl, impMeta map[string]int
 					if usage, exists := methodEntity.UsedFields[expr.Sel.Name]; !exists {
 						methodEntity.UsedFields[expr.Sel.Name] = usage
 					}
+
+					methodEntity.UsedFields[expr.Sel.Name]++
 				}
 
 				if ident.Name != receiver.Name {

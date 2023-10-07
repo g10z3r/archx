@@ -36,7 +36,7 @@ func main() {
 	// scanService.Perform(ctx, "example/cmd", "github.com/g10z3r/archx")
 
 	colony := anthill.SpawnColony(anthill.DefaultConfig(
-	// anthill.WithSelectedDir("example/cmd"),
+		anthill.WithSelectedDir("example/cmd"),
 	))
 
 	colony.Explore(".")
