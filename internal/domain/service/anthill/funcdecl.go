@@ -2,11 +2,12 @@ package anthill
 
 import (
 	"go/ast"
+	"go/token"
 
 	"github.com/g10z3r/archx/internal/domain/entity"
 )
 
-func (f *forager) processFuncDecl(funcDecl *ast.FuncDecl, impMeta map[string]int, fileName string) error {
+func (f *forager) processFuncDecl(fset *token.FileSet, funcDecl *ast.FuncDecl, impMeta map[string]int, fileName string) error {
 	if funcDecl.Recv == nil {
 		return nil
 	}
@@ -21,7 +22,36 @@ func (f *forager) processFuncDecl(funcDecl *ast.FuncDecl, impMeta map[string]int
 		return nil
 	}
 
-	methodEntity := entity.NewMethodEntity(funcDecl, parentStruct.Name)
+	var params map[string]*entity.FuncParam
+	if len(funcDecl.Type.Params.List) > 0 {
+		params = make(map[string]*entity.FuncParam)
+	}
+
+	paramsDeps := map[string]*entity.DependencyEntity{}
+	for _, param := range funcDecl.Type.Params.List {
+		for _, name := range param.Names {
+			typ, err := entity.ExtractExprAsType(fset, param.Type)
+			if err != nil {
+				return err
+			}
+
+			params[name.Name] = &entity.FuncParam{
+				Type: typ.Type,
+			}
+
+			if len(typ.UsedPackages) < 1 {
+				continue
+			}
+
+			if index, exists := impMeta[typ.UsedPackages[0].Alias]; exists {
+				paramsDeps[typ.UsedPackages[0].Element] = &entity.DependencyEntity{
+					ImportIndex: index,
+				}
+			}
+		}
+	}
+
+	funcEntity := entity.NewFunctionEntity(fset, funcDecl, params, paramsDeps, &parentStruct.Name)
 	receiver := funcDecl.Recv.List[0].Names[0]
 
 	ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
@@ -29,16 +59,15 @@ func (f *forager) processFuncDecl(funcDecl *ast.FuncDecl, impMeta map[string]int
 		case *ast.SelectorExpr:
 			if ident, ok := expr.X.(*ast.Ident); ok {
 				if ident.Name == receiver.Name {
-					if usage, exists := methodEntity.UsedFields[expr.Sel.Name]; !exists {
-						methodEntity.UsedFields[expr.Sel.Name] = usage
+					if usage, exists := funcEntity.Fields[expr.Sel.Name]; !exists {
+						funcEntity.Fields[expr.Sel.Name] = usage
 					}
-
-					methodEntity.UsedFields[expr.Sel.Name]++
+					funcEntity.Fields[expr.Sel.Name]++
 				}
 
 				if ident.Name != receiver.Name {
 					if index, exists := impMeta[ident.Name]; exists {
-						methodEntity.AddDependency(index, expr.Sel.Name)
+						funcEntity.AddDependency(index, expr.Sel.Name)
 					}
 				}
 			}
@@ -46,8 +75,8 @@ func (f *forager) processFuncDecl(funcDecl *ast.FuncDecl, impMeta map[string]int
 		return true
 	})
 
-	bucket, _ := f.storage.methodBucket.Load(fileName)
-	f.storage.methodBucket.Store(fileName, append(bucket, methodEntity))
+	bucket, _ := f.storage.funcBucket.Load(fileName)
+	f.storage.funcBucket.Store(fileName, append(bucket, funcEntity))
 
 	return nil
 }

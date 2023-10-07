@@ -6,7 +6,7 @@ type PackageEntity struct {
 	Imports           []string
 	SideEffectImports []string
 	Structs           []*StructEntity
-	Methods           []*MethodEntity
+	Functions         []*FunctionEntity
 }
 
 func NewPackageEntity(path, name string) *PackageEntity {

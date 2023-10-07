@@ -23,7 +23,7 @@ type nest struct {
 	seiFilter    bloom.BloomFilter
 
 	structBucket bucket[string, []*entity.StructEntity]
-	methodBucket bucket[string, []*entity.MethodEntity]
+	funcBucket   bucket[string, []*entity.FunctionEntity]
 }
 
 type forager struct {
@@ -57,8 +57,8 @@ func (f *forager) process(pkg *ast.Package, pkgPath, modName string) *entity.Pac
 		return true
 	})
 
-	f.storage.methodBucket.Range(func(key string, shard []*entity.MethodEntity) bool {
-		pkgEntity.Methods = append(pkgEntity.Methods, shard...)
+	f.storage.funcBucket.Range(func(key string, shard []*entity.FunctionEntity) bool {
+		pkgEntity.Functions = append(pkgEntity.Functions, shard...)
 		return true
 	})
 
@@ -157,7 +157,7 @@ func (f *forager) processBody(files map[string]*ast.File, head *headDTO) {
 						log.Fatal(err)
 					}
 				case *ast.FuncDecl:
-					if err := f.processFuncDecl(d, impMeta, fileName); err != nil {
+					if err := f.processFuncDecl(fset, d, impMeta, fileName); err != nil {
 						log.Fatal(err)
 					}
 				}

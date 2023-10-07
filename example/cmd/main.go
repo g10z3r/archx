@@ -53,7 +53,7 @@ func (p *Person) ChangeFirstName(newFirstName string) *Person {
 	return p
 }
 
-func (p *Person) ChangeLastName(newLastName string) *Person {
+func (p *Person) ChangeLastName(newLastName string, d data.PersonalInfo) *Person {
 
 	metadata.MetadataSome()
 	if newLastName != p.LastName {

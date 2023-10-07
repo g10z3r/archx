@@ -27,7 +27,7 @@ func newPackageAccessor(docID primitive.ObjectID, col *mongo.Collection) *packag
 		collection: col,
 
 		importAcc: newImportAccessor(docID, col),
-		structAcc: newStructAccessor(docID, col),
+		// structAcc: newStructAccessor(docID, col),
 	}
 }
 
