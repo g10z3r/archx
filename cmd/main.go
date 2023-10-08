@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/g10z3r/archx/internal/domain/obj"
 	"github.com/g10z3r/archx/internal/domain/service/anthill"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
