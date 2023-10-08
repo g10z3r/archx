@@ -83,7 +83,7 @@ func (c *Colony) scanDir(entries []os.DirEntry, root string) ([]string, bool, er
 			continue
 		}
 
-		if entryName == goModFileName && len(c.Metadata.GoVersion) < 1 {
+		if entryName == goModFileName {
 			if err := c.processGoMod(root); err != nil {
 				return nil, false, fmt.Errorf("failed to process go.mod: %w", err)
 			}

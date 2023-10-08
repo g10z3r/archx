@@ -42,16 +42,18 @@ func (f *FuncObj) AddDependency(importIndex int, element string) {
 	f.Dependencies[element].Usage++
 }
 
-func NewFuncObj(fset *token.FileSet, res *ast.FuncDecl, params map[string]*FuncObjParam, initDeps map[string]*DepObj, receiver *string) *FuncObj {
+func NewFuncObj(fset *token.FileSet, res *ast.FuncDecl, params map[string]*FuncObjParam, initDeps map[string]*DepObj, receiver *ast.Ident) *FuncObj {
+	var receiverName *string
 	var fields map[string]int
 
 	if receiver != nil {
+		receiverName = &receiver.Name
 		fields = make(map[string]int)
 	}
 
 	return &FuncObj{
 		Name:         res.Name.Name,
-		Receiver:     receiver,
+		Receiver:     receiverName,
 		Fields:       fields,
 		Dependencies: initDeps,
 		Parameters:   params,

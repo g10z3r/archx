@@ -54,11 +54,18 @@ func (p *Person) ChangeFirstName(newFirstName string) *Person {
 }
 
 func (p *Person) ChangeLastName(newLastName string, d data.PersonalInfo) *Person {
-
 	metadata.MetadataSome()
 	if newLastName != p.LastName {
 		p.LastName = newLastName
 	}
 
 	return p
+}
+
+func (p *Person) RecursiveMethod(data string) *Person {
+	return p.RecursiveMethod(data)
+}
+
+func recursive(data string) *Person {
+	return recursive(data)
 }

@@ -1,6 +1,7 @@
 package anthill
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 
@@ -8,18 +9,18 @@ import (
 )
 
 func (f *forager) processFuncDecl(fset *token.FileSet, funcDecl *ast.FuncDecl, impMeta map[string]int, fileName string) error {
-	if funcDecl.Recv == nil {
-		return nil
-	}
+	var parentStruct *ast.Ident
 
-	starExpr, ok := funcDecl.Recv.List[0].Type.(*ast.StarExpr)
-	if !ok {
-		return nil
-	}
+	if funcDecl.Recv != nil {
+		starExpr, ok := funcDecl.Recv.List[0].Type.(*ast.StarExpr)
+		if !ok {
+			return nil
+		}
 
-	parentStruct, ok := starExpr.X.(*ast.Ident)
-	if !ok {
-		return nil
+		parentStruct, ok = starExpr.X.(*ast.Ident)
+		if !ok {
+			return nil
+		}
 	}
 
 	params, deps, err := processFuncParams(fset, funcDecl, impMeta)
@@ -27,10 +28,9 @@ func (f *forager) processFuncDecl(fset *token.FileSet, funcDecl *ast.FuncDecl, i
 		return err
 	}
 
-	funcEntity := obj.NewFuncObj(fset, funcDecl, params, deps, &parentStruct.Name)
-	receiver := funcDecl.Recv.List[0].Names[0]
+	funcEntity := obj.NewFuncObj(fset, funcDecl, params, deps, parentStruct)
 
-	if err := inspectFuncBody(funcDecl, receiver, funcEntity, impMeta); err != nil {
+	if err := inspectFuncBody(funcDecl, funcEntity, impMeta); err != nil {
 		return err
 	}
 
@@ -40,22 +40,63 @@ func (f *forager) processFuncDecl(fset *token.FileSet, funcDecl *ast.FuncDecl, i
 	return nil
 }
 
-func inspectFuncBody(funcDecl *ast.FuncDecl, receiver *ast.Ident, funcEntity *obj.FuncObj, impMeta map[string]int) error {
+func prepareFunc(funcDecl *ast.FuncDecl) (*ast.Ident, error) {
+	if funcDecl.Recv != nil {
+		starExpr, ok := funcDecl.Recv.List[0].Type.(*ast.StarExpr)
+		if !ok {
+			return nil, nil
+		}
+
+		parentStruct, ok := starExpr.X.(*ast.Ident)
+		if !ok {
+			return nil, fmt.Errorf("failed to get parent struct for method %s", funcDecl.Name.Name)
+		}
+
+		return parentStruct, nil
+	}
+
+	return nil, nil
+
+}
+
+func inspectFuncBody(funcDecl *ast.FuncDecl, funcEntity *obj.FuncObj, impMeta map[string]int) error {
+	// Get the recipient's name if it is a structure method
+	var receiverName string
+	if funcDecl.Recv != nil && len(funcDecl.Recv.List) > 0 {
+		receiverName = funcDecl.Recv.List[0].Names[0].Name
+	}
+
 	ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
 		switch expr := n.(type) {
 		case *ast.SelectorExpr:
 			if ident, ok := expr.X.(*ast.Ident); ok {
 				// Structure field call found
-				if ident.Name == receiver.Name {
+				if ident.Name == receiverName {
 					if usage, exists := funcEntity.Fields[expr.Sel.Name]; !exists {
 						funcEntity.Fields[expr.Sel.Name] = usage
 					}
+
 					funcEntity.Fields[expr.Sel.Name]++
 				}
 
 				// Found using another internal package
 				if index, exists := impMeta[ident.Name]; exists {
 					funcEntity.AddDependency(index, expr.Sel.Name)
+				}
+			}
+
+		case *ast.CallExpr:
+			// Check for recursion in regular functions
+			if ident, ok := expr.Fun.(*ast.Ident); ok {
+				if ident.Name == funcEntity.Name {
+					funcEntity.Metadata.IsRecursive = true
+				}
+			}
+
+			// Check for recursion in methods
+			if sel, ok := expr.Fun.(*ast.SelectorExpr); ok {
+				if ident, ok := sel.X.(*ast.Ident); ok && ident.Name == receiverName && sel.Sel.Name == funcEntity.Name {
+					funcEntity.Metadata.IsRecursive = true
 				}
 			}
 		}
