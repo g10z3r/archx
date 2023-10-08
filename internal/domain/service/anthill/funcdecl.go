@@ -48,6 +48,8 @@ func (f *forager) processFuncDecl(fset *token.FileSet, funcDecl *ast.FuncDecl, i
 					ImportIndex: index,
 				}
 			}
+
+			paramsDeps[typ.UsedPackages[0].Element].Usage++
 		}
 	}
 
