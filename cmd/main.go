@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/g10z3r/archx/internal/domain/entity"
 	"github.com/g10z3r/archx/internal/domain/service/anthill"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -39,12 +40,21 @@ func main() {
 		anthill.WithSelectedDir("example/cmd"),
 	))
 
-	colony.Explore(".")
-	snap, err := colony.Forage()
-	if err != nil {
+	if err := colony.Explore("."); err != nil {
 		log.Fatal(err)
 	}
 
-	jsonData, _ := json.Marshal(snap)
+	snapshot := entity.NewSnapshotEntity(colony.Metadata.ModName, len(colony.Packages))
+	fmt.Println(colony.Packages)
+	for _, pkg := range colony.Packages {
+		ent, err := colony.Forage(pkg)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		snapshot.Packages = append(snapshot.Packages, ent)
+	}
+
+	jsonData, _ := json.Marshal(snapshot)
 	fmt.Println(string(jsonData))
 }

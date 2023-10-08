@@ -2,10 +2,8 @@ package anthill
 
 import (
 	"errors"
-	"go/ast"
 	"go/parser"
 	"go/token"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,28 +17,29 @@ const goModFileName = "go.mod"
 const goFileExt = ".go"
 
 type Metadata struct {
-	modName   string
-	goVersion string
+	ModName   string
+	GoVersion string
 }
 
 type Colony struct {
-	mu sync.Mutex
-
-	snapshot *entity.SnapshotEntity
-	packages []string
-
-	metadata *Metadata
+	mu       sync.Mutex
+	Packages []string
+	Metadata *Metadata
 	config   *Config
 }
 
 func SpawnColony(cfg *Config) *Colony {
 	return &Colony{
 		config:   cfg,
-		metadata: &Metadata{},
+		Metadata: &Metadata{},
 	}
 }
 
 func (c *Colony) Explore(root string) error {
+	return c.recursiveExplore(root, true)
+}
+
+func (c *Colony) recursiveExplore(root string, isRootCall bool) error {
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		return err
@@ -51,40 +50,49 @@ func (c *Colony) Explore(root string) error {
 		return err
 	}
 
-	if goFilesExist {
-		if !strings.HasPrefix(root, c.config.selectedDir) {
-			return nil
-		}
+	if goFilesExist && strings.HasPrefix(root, c.config.selectedDir) {
+		c.Packages = append(c.Packages, root)
+	}
 
-		c.packages = append(c.packages, root)
+	if err := c.exploreSubdirectories(subdirs); err != nil {
+		return err
+	}
+
+	if !isRootCall {
 		return nil
 	}
 
-	return c.exploreSubdirectories(subdirs)
+	if len(c.Metadata.ModName) < 1 || len(c.Metadata.GoVersion) < 1 {
+		return errors.New("couldn't find the go.mod file")
+	}
+
+	return nil
 }
 
 func (c *Colony) scanDirectory(entries []os.DirEntry, root string) ([]string, bool, error) {
 	var subdirs []string
-	var goFilesExist bool
+	goFilesExist := false
 
 	for _, entry := range entries {
+		entryName := entry.Name()
+
 		if entry.IsDir() {
-			subdir := filepath.Join(root, entry.Name())
-			if _, exists := c.config.ignoredList[entry.Name()]; !exists {
-				subdirs = append(subdirs, subdir)
+			if _, exists := c.config.ignoredList[entryName]; exists {
+				continue
+			}
+			subdirs = append(subdirs, filepath.Join(root, entryName))
+			continue
+		}
+
+		if entryName == goModFileName && len(c.Metadata.GoVersion) < 1 {
+			if err := c.processGoModFile(root); err != nil {
+				return nil, false, err
 			}
 			continue
 		}
 
-		if entry.Name() == goModFileName && len(c.metadata.goVersion) < 1 {
-			if err := c.processGoModFile(root); err != nil {
-				return nil, false, err
-			}
-		}
-
-		if filepath.Ext(entry.Name()) == goFileExt {
+		if filepath.Ext(entryName) == goFileExt {
 			goFilesExist = true
-			break
 		}
 	}
 
@@ -93,7 +101,7 @@ func (c *Colony) scanDirectory(entries []os.DirEntry, root string) ([]string, bo
 
 func (c *Colony) exploreSubdirectories(subdirs []string) error {
 	for _, subdir := range subdirs {
-		if err := c.Explore(subdir); err != nil {
+		if err := c.recursiveExplore(subdir, false); err != nil {
 			return err
 		}
 	}
@@ -113,51 +121,26 @@ func (c *Colony) processGoModFile(root string) error {
 		return err
 	}
 
-	c.metadata.modName = modFileData.Module.Mod.Path
-	c.metadata.goVersion = modFileData.Go.Version
+	c.Metadata.ModName = modFileData.Module.Mod.Path
+	c.Metadata.GoVersion = modFileData.Go.Version
 
 	return nil
 }
 
-func (c *Colony) Forage() (*entity.SnapshotEntity, error) {
-	if len(c.metadata.modName) < 1 || len(c.metadata.goVersion) < 1 {
-		return nil, errors.New("couldn't find the go.mod file")
-	}
-
-	c.snapshot = entity.NewSnapshotEntity(c.metadata.modName, len(c.packages))
-
-	for _, dir := range c.packages {
-		if err := c.scanPackages(dir); err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	return c.snapshot, nil
-}
-
-func (c *Colony) scanPackages(dirPath string) error {
+func (c *Colony) Forage(dirPath string) (*entity.PackageEntity, error) {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, dirPath, nil, parser.AllErrors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	var wg sync.WaitGroup
+	var pkgEntity *entity.PackageEntity
+	forager := newForager(fset)
+
 	for _, pkg := range pkgs {
-		wg.Add(1)
-		go func(pkg *ast.Package) {
-			forager := newForager(fset)
-			pkgEntity := forager.process(pkg, dirPath, c.metadata.modName)
-
-			c.mu.Lock()
-			c.snapshot.Packages = append(c.snapshot.Packages, pkgEntity)
-			c.mu.Unlock()
-
-			wg.Done()
-		}(pkg)
+		pkgEntity = forager.process(pkg, dirPath, c.Metadata.ModName)
+		break
 	}
 
-	wg.Wait()
-
-	return nil
+	return pkgEntity, nil
 }
