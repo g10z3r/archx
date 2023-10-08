@@ -2,12 +2,12 @@ package anthill
 
 import (
 	"errors"
+	"fmt"
 	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 	"golang.org/x/mod/modfile"
@@ -22,7 +22,6 @@ type Metadata struct {
 }
 
 type Colony struct {
-	mu       sync.Mutex
 	Packages []string
 	Metadata *Metadata
 	config   *Config
@@ -36,29 +35,29 @@ func SpawnColony(cfg *Config) *Colony {
 }
 
 func (c *Colony) Explore(root string) error {
-	return c.recursiveExplore(root, true)
+	return c.explore(root, true)
 }
 
-func (c *Colony) recursiveExplore(root string, isRootCall bool) error {
-	entries, err := os.ReadDir(root)
+func (c *Colony) explore(path string, isRoot bool) error {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return fmt.Errorf("failed to read directory: %w", err)
+	}
+
+	subdirs, goFilesExist, err := c.scanDir(entries, path)
 	if err != nil {
 		return err
 	}
 
-	subdirs, goFilesExist, err := c.scanDirectory(entries, root)
-	if err != nil {
+	if goFilesExist && strings.HasPrefix(path, c.config.selectedDir) {
+		c.Packages = append(c.Packages, path)
+	}
+
+	if err := c.exploreSubDir(subdirs); err != nil {
 		return err
 	}
 
-	if goFilesExist && strings.HasPrefix(root, c.config.selectedDir) {
-		c.Packages = append(c.Packages, root)
-	}
-
-	if err := c.exploreSubdirectories(subdirs); err != nil {
-		return err
-	}
-
-	if !isRootCall {
+	if !isRoot {
 		return nil
 	}
 
@@ -69,7 +68,7 @@ func (c *Colony) recursiveExplore(root string, isRootCall bool) error {
 	return nil
 }
 
-func (c *Colony) scanDirectory(entries []os.DirEntry, root string) ([]string, bool, error) {
+func (c *Colony) scanDir(entries []os.DirEntry, root string) ([]string, bool, error) {
 	var subdirs []string
 	goFilesExist := false
 
@@ -85,8 +84,8 @@ func (c *Colony) scanDirectory(entries []os.DirEntry, root string) ([]string, bo
 		}
 
 		if entryName == goModFileName && len(c.Metadata.GoVersion) < 1 {
-			if err := c.processGoModFile(root); err != nil {
-				return nil, false, err
+			if err := c.processGoMod(root); err != nil {
+				return nil, false, fmt.Errorf("failed to process go.mod: %w", err)
 			}
 			continue
 		}
@@ -99,9 +98,9 @@ func (c *Colony) scanDirectory(entries []os.DirEntry, root string) ([]string, bo
 	return subdirs, goFilesExist, nil
 }
 
-func (c *Colony) exploreSubdirectories(subdirs []string) error {
+func (c *Colony) exploreSubDir(subdirs []string) error {
 	for _, subdir := range subdirs {
-		if err := c.recursiveExplore(subdir, false); err != nil {
+		if err := c.explore(subdir, false); err != nil {
 			return err
 		}
 	}
@@ -109,7 +108,7 @@ func (c *Colony) exploreSubdirectories(subdirs []string) error {
 	return nil
 }
 
-func (c *Colony) processGoModFile(root string) error {
+func (c *Colony) processGoMod(root string) error {
 	goModPath := filepath.Join(root, goModFileName)
 	content, err := os.ReadFile(goModPath)
 	if err != nil {
