@@ -9,7 +9,7 @@ import (
 
 	"github.com/g10z3r/archx/internal/domain/repository"
 
-	"github.com/g10z3r/archx/internal/domain/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 	"github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/model"
 )
 

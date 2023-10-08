@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/g10z3r/archx/internal/domain/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
 type SnapshotRepository interface {

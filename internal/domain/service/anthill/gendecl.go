@@ -4,7 +4,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/g10z3r/archx/internal/domain/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
 func (f *forager) processGenDecl(fset *token.FileSet, genDecl *ast.GenDecl, impMeta map[string]int, fileName string) error {

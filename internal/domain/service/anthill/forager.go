@@ -9,7 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/g10z3r/archx/internal/domain/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 	"github.com/g10z3r/archx/pkg/bloom"
 	"github.com/g10z3r/archx/pkg/dsl"
 )
