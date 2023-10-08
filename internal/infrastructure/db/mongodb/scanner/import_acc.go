@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/g10z3r/archx/internal/domain/entity"
+	"github.com/g10z3r/archx/internal/domain/obj"
 )
 
 type importAccessor struct {
@@ -23,7 +23,7 @@ func newImportAccessor(docID primitive.ObjectID, col *mongo.Collection) *importA
 	}
 }
 
-func (r *importAccessor) Append(ctx context.Context, _import *entity.ImportEntity, packagePath string) error {
+func (r *importAccessor) Append(ctx context.Context, _import *obj.ImportObj, packagePath string) error {
 	filter := bson.D{
 		{Key: "_id", Value: r.documentID},
 	}
@@ -42,7 +42,7 @@ func (r *importAccessor) Append(ctx context.Context, _import *entity.ImportEntit
 	return err
 }
 
-func (r *importAccessor) AppendSideEffectImport(ctx context.Context, _import *entity.ImportEntity, packagePath string) error {
+func (r *importAccessor) AppendSideEffectImport(ctx context.Context, _import *obj.ImportObj, packagePath string) error {
 	filter := bson.D{
 		{Key: "_id", Value: r.documentID},
 	}

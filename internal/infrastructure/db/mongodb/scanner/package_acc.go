@@ -9,7 +9,7 @@ import (
 
 	"github.com/g10z3r/archx/internal/domain/repository"
 
-	"github.com/g10z3r/archx/internal/domain/entity"
+	"github.com/g10z3r/archx/internal/domain/obj"
 	"github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/model"
 )
 
@@ -26,7 +26,7 @@ func newPackageAccessor(docID primitive.ObjectID, col *mongo.Collection) *packag
 		documentID: docID,
 		collection: col,
 
-		importAcc: newImportAccessor(docID, col),
+		// importAcc: newImportAccessor(docID, col),
 		// structAcc: newStructAccessor(docID, col),
 	}
 }
@@ -39,7 +39,7 @@ func (r *packageAccessor) StructAcc() repository.StructAccessor {
 	return r.structAcc
 }
 
-func (r *packageAccessor) Append(ctx context.Context, newPackage *entity.PackageEntity, packageIndex int) error {
+func (r *packageAccessor) Append(ctx context.Context, newPackage *obj.PackageObj, packageIndex int) error {
 	filter := bson.D{
 		{Key: "_id", Value: r.documentID},
 	}

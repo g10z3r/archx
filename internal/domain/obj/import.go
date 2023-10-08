@@ -1,4 +1,4 @@
-package entity
+package obj
 
 import (
 	"go/ast"
@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-type ImportEntity struct {
+type ImportObj struct {
 	File      string
 	Path      string
 	Alias     string
 	WithAlias bool
 }
 
-func (e *ImportEntity) CheckAndTrim(modName string) bool {
+func (e *ImportObj) CheckAndTrim(modName string) bool {
 	if len(e.Path) < len(modName) {
 		return false
 	}
@@ -26,7 +26,7 @@ func (e *ImportEntity) CheckAndTrim(modName string) bool {
 	return true
 }
 
-func NewImportEntity(fileName string, importSpec *ast.ImportSpec) *ImportEntity {
+func NewImportObj(fileName string, importSpec *ast.ImportSpec) *ImportObj {
 	var isWithAlias bool
 	var alias string
 
@@ -34,7 +34,7 @@ func NewImportEntity(fileName string, importSpec *ast.ImportSpec) *ImportEntity 
 		alias = importSpec.Name.Name
 		isWithAlias = true
 	}
-	return &ImportEntity{
+	return &ImportObj{
 		File:      filepath.Base(fileName),
 		Path:      strings.Trim(importSpec.Path.Value, `"`),
 		Alias:     alias,

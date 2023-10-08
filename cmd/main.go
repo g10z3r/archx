@@ -7,11 +7,24 @@ import (
 	"log"
 	"time"
 
-	"github.com/g10z3r/archx/internal/domain/entity"
+	"github.com/g10z3r/archx/internal/domain/obj"
 	"github.com/g10z3r/archx/internal/domain/service/anthill"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+type SnapshotEntity struct {
+	Timestamp int64
+	BasePath  string
+	Packages  []*obj.PackageObj
+}
+
+func NewSnapshotEntity(mod string, pkgCount int) *SnapshotEntity {
+	return &SnapshotEntity{
+		Timestamp: time.Now().Unix(),
+		BasePath:  mod,
+	}
+}
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -44,7 +57,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	snapshot := entity.NewSnapshotEntity(colony.Metadata.ModName, len(colony.Packages))
+	snapshot := NewSnapshotEntity(colony.Metadata.ModName, len(colony.Packages))
 	fmt.Println(colony.Packages)
 	for _, pkg := range colony.Packages {
 		ent, err := colony.Forage(pkg)

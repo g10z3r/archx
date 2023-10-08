@@ -4,7 +4,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/g10z3r/archx/internal/domain/entity"
+	"github.com/g10z3r/archx/internal/domain/obj"
 )
 
 func (f *forager) processFuncDecl(fset *token.FileSet, funcDecl *ast.FuncDecl, impMeta map[string]int, fileName string) error {
@@ -22,20 +22,20 @@ func (f *forager) processFuncDecl(fset *token.FileSet, funcDecl *ast.FuncDecl, i
 		return nil
 	}
 
-	var params map[string]*entity.FuncParam
+	var params map[string]*obj.FuncObjParam
 	if len(funcDecl.Type.Params.List) > 0 {
-		params = make(map[string]*entity.FuncParam)
+		params = make(map[string]*obj.FuncObjParam)
 	}
 
-	paramsDeps := map[string]*entity.DependencyEntity{}
+	paramsDeps := map[string]*obj.DepObj{}
 	for _, param := range funcDecl.Type.Params.List {
 		for _, name := range param.Names {
-			typ, err := entity.ExtractExprAsType(fset, param.Type)
+			typ, err := obj.ExtractExprAsType(fset, param.Type)
 			if err != nil {
 				return err
 			}
 
-			params[name.Name] = &entity.FuncParam{
+			params[name.Name] = &obj.FuncObjParam{
 				Type: typ.Type,
 			}
 
@@ -44,7 +44,7 @@ func (f *forager) processFuncDecl(fset *token.FileSet, funcDecl *ast.FuncDecl, i
 			}
 
 			if index, exists := impMeta[typ.UsedPackages[0].Alias]; exists {
-				paramsDeps[typ.UsedPackages[0].Element] = &entity.DependencyEntity{
+				paramsDeps[typ.UsedPackages[0].Element] = &obj.DepObj{
 					ImportIndex: index,
 				}
 			}
@@ -53,7 +53,7 @@ func (f *forager) processFuncDecl(fset *token.FileSet, funcDecl *ast.FuncDecl, i
 		}
 	}
 
-	funcEntity := entity.NewFunctionEntity(fset, funcDecl, params, paramsDeps, &parentStruct.Name)
+	funcEntity := obj.NewFuncObj(fset, funcDecl, params, paramsDeps, &parentStruct.Name)
 	receiver := funcDecl.Recv.List[0].Names[0]
 
 	ast.Inspect(funcDecl.Body, func(n ast.Node) bool {

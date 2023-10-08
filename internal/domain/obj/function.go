@@ -1,4 +1,4 @@
-package entity
+package obj
 
 import (
 	"go/ast"
@@ -6,7 +6,7 @@ import (
 	"unicode"
 )
 
-type FuncMetadata struct {
+type FuncObjMetadata struct {
 	LineCount      int
 	Arity          int
 	ReturnCount    int
@@ -14,24 +14,24 @@ type FuncMetadata struct {
 	HasSideEffects bool
 }
 
-type FuncParam struct {
+type FuncObjParam struct {
 	Type  string
 	Usage int
 }
 
-type FunctionEntity struct {
+type FuncObj struct {
 	Name         string
 	Receiver     *string
 	Fields       map[string]int
-	Parameters   map[string]*FuncParam
-	Dependencies map[string]*DependencyEntity
+	Parameters   map[string]*FuncObjParam
+	Dependencies map[string]*DepObj
 	Visibility   bool
-	Metadata     *FuncMetadata
+	Metadata     *FuncObjMetadata
 }
 
-func (s *FunctionEntity) AddDependency(importIndex int, element string) {
-	if _, exists := s.Dependencies[element]; !exists {
-		s.Dependencies[element] = &DependencyEntity{
+func (f *FuncObj) AddDependency(importIndex int, element string) {
+	if _, exists := f.Dependencies[element]; !exists {
+		f.Dependencies[element] = &DepObj{
 			ImportIndex: importIndex,
 			Usage:       1,
 		}
@@ -39,24 +39,24 @@ func (s *FunctionEntity) AddDependency(importIndex int, element string) {
 		return
 	}
 
-	s.Dependencies[element].Usage++
+	f.Dependencies[element].Usage++
 }
 
-func NewFunctionEntity(fset *token.FileSet, res *ast.FuncDecl, params map[string]*FuncParam, initDeps map[string]*DependencyEntity, receiver *string) *FunctionEntity {
+func NewFuncObj(fset *token.FileSet, res *ast.FuncDecl, params map[string]*FuncObjParam, initDeps map[string]*DepObj, receiver *string) *FuncObj {
 	var fields map[string]int
 
 	if receiver != nil {
 		fields = make(map[string]int)
 	}
 
-	return &FunctionEntity{
+	return &FuncObj{
 		Name:         res.Name.Name,
 		Receiver:     receiver,
 		Fields:       fields,
 		Dependencies: initDeps,
 		Parameters:   params,
 		Visibility:   unicode.IsUpper(rune(res.Name.Name[0])),
-		Metadata: &FuncMetadata{
+		Metadata: &FuncObjMetadata{
 			LineCount: calcLineCount(fset, res),
 			Arity:     len(params),
 		},

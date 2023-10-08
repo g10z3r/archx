@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/g10z3r/archx/internal/domain/entity"
+	"github.com/g10z3r/archx/internal/domain/obj"
 )
 
 type FieldDAO struct {
@@ -37,7 +37,7 @@ type StructDAO struct {
 // 	}
 // }
 
-func MapStructEntity(e *entity.StructEntity) *StructDAO {
+func MapStructEntity(e *obj.StructObj) *StructDAO {
 	fields := make([]*FieldDAO, 0, len(e.Fields))
 	for i := 0; i < len(e.Fields); i++ {
 		fields = append(fields, mapFieldEntity(e.Fields[i]))
@@ -62,7 +62,7 @@ func MapStructEntity(e *entity.StructEntity) *StructDAO {
 	}
 }
 
-func mapFieldEntity(e *entity.FieldEntity) *FieldDAO {
+func mapFieldEntity(e *obj.FieldObj) *FieldDAO {
 	var embedded *StructDAO
 	if e.Embedded != nil {
 		embedded = MapStructEntity(e.Embedded)
@@ -82,7 +82,7 @@ func mapFieldEntity(e *entity.FieldEntity) *FieldDAO {
 // 	}
 // }
 
-func mapDependencyEntity(e *entity.DependencyEntity) *DependencyDAO {
+func mapDependencyEntity(e *obj.DepObj) *DependencyDAO {
 	return &DependencyDAO{
 		ImportIndex: e.ImportIndex,
 		Usage:       e.Usage,

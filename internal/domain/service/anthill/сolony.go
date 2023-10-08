@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/g10z3r/archx/internal/domain/entity"
+	"github.com/g10z3r/archx/internal/domain/obj"
 	"golang.org/x/mod/modfile"
 )
 
@@ -127,14 +127,14 @@ func (c *Colony) processGoModFile(root string) error {
 	return nil
 }
 
-func (c *Colony) Forage(dirPath string) (*entity.PackageEntity, error) {
+func (c *Colony) Forage(dirPath string) (*obj.PackageObj, error) {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, dirPath, nil, parser.AllErrors)
 	if err != nil {
 		return nil, err
 	}
 
-	var pkgEntity *entity.PackageEntity
+	var pkgEntity *obj.PackageObj
 	forager := newForager(fset)
 
 	for _, pkg := range pkgs {

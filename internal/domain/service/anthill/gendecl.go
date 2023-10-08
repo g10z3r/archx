@@ -4,7 +4,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/g10z3r/archx/internal/domain/entity"
+	"github.com/g10z3r/archx/internal/domain/obj"
 )
 
 func (f *forager) processGenDecl(fset *token.FileSet, genDecl *ast.GenDecl, impMeta map[string]int, fileName string) error {
@@ -47,8 +47,8 @@ func newStructProcDTO(typeSpec *ast.TypeSpec, structType *ast.StructType) *struc
 	}
 }
 
-func (f *forager) processStructType(fset *token.FileSet, dto *structProcDTO, impMeta map[string]int) (*entity.StructEntity, error) {
-	structEntity, usedPackages, err := entity.NewStructEntity(fset, dto.structType, entity.NotEmbedded, &dto.structName)
+func (f *forager) processStructType(fset *token.FileSet, dto *structProcDTO, impMeta map[string]int) (*obj.StructObj, error) {
+	structEntity, usedPackages, err := obj.NewStructObj(fset, dto.structType, obj.NotEmbedded, &dto.structName)
 	if err != nil {
 		return nil, err
 	}

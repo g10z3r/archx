@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"github.com/g10z3r/archx/internal/domain/entity"
+	"github.com/g10z3r/archx/internal/domain/obj"
 	"github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/model"
 )
 
@@ -29,7 +29,7 @@ func newStructAccessor(docID primitive.ObjectID, col *mongo.Collection) *structA
 	}
 }
 
-func (r *structAccessor) Append(ctx context.Context, structEntity *entity.StructEntity, structIndex int, pkgPath string) error {
+func (r *structAccessor) Append(ctx context.Context, structEntity *obj.StructObj, structIndex int, pkgPath string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

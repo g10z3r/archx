@@ -9,7 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/g10z3r/archx/internal/domain/entity"
+	"github.com/g10z3r/archx/internal/domain/obj"
 	"github.com/g10z3r/archx/pkg/bloom"
 	"github.com/g10z3r/archx/pkg/dsl"
 )
@@ -22,8 +22,8 @@ type nest struct {
 	importFilter bloom.BloomFilter
 	seiFilter    bloom.BloomFilter
 
-	structBucket bucket[string, []*entity.StructEntity]
-	funcBucket   bucket[string, []*entity.FunctionEntity]
+	structBucket bucket[string, []*obj.StructObj]
+	funcBucket   bucket[string, []*obj.FuncObj]
 }
 
 type forager struct {
@@ -42,27 +42,27 @@ func newForager(fset *token.FileSet) *forager {
 	}
 }
 
-func (f *forager) process(pkg *ast.Package, pkgPath, modName string) *entity.PackageEntity {
-	pkgEntity := entity.NewPackageEntity(pkgPath, pkg.Name)
+func (f *forager) process(pkg *ast.Package, pkgPath, modName string) *obj.PackageObj {
+	pkgObj := obj.NewPackageObj(pkgPath, pkg.Name)
 	head := f.processHead(pkg.Files, modName)
 
-	pkgEntity.Imports = append(pkgEntity.Imports, head.RegularImports...)
-	pkgEntity.SideEffectImports = append(pkgEntity.SideEffectImports, head.SideEffectImports...)
+	pkgObj.Imports = append(pkgObj.Imports, head.RegularImports...)
+	pkgObj.SideEffectImports = append(pkgObj.SideEffectImports, head.SideEffectImports...)
 
 	f.processBody(pkg.Files, head)
 	f.frozen = true
 
-	f.storage.structBucket.Range(func(key string, shard []*entity.StructEntity) bool {
-		pkgEntity.Structs = append(pkgEntity.Structs, shard...)
+	f.storage.structBucket.Range(func(key string, shard []*obj.StructObj) bool {
+		pkgObj.Structs = append(pkgObj.Structs, shard...)
 		return true
 	})
 
-	f.storage.funcBucket.Range(func(key string, shard []*entity.FunctionEntity) bool {
-		pkgEntity.Functions = append(pkgEntity.Functions, shard...)
+	f.storage.funcBucket.Range(func(key string, shard []*obj.FuncObj) bool {
+		pkgObj.Functions = append(pkgObj.Functions, shard...)
 		return true
 	})
 
-	return pkgEntity
+	return pkgObj
 }
 
 type headDTO struct {
@@ -170,16 +170,16 @@ func (f *forager) processBody(files map[string]*ast.File, head *headDTO) {
 	wg.Wait()
 }
 
-func fetchPackageImports(files map[string]*ast.File) ([]*entity.ImportEntity, int) {
+func fetchPackageImports(files map[string]*ast.File) ([]*obj.ImportObj, int) {
 	var impTotal int
-	var imports []*entity.ImportEntity
+	var imports []*obj.ImportObj
 
 	for fileName, file := range files {
 		impTotal = impTotal + len(file.Imports)
 
 		for _, imp := range file.Imports {
 			if imp.Path != nil && imp.Path.Value != "" {
-				imports = append(imports, entity.NewImportEntity(fileName, imp))
+				imports = append(imports, obj.NewImportObj(fileName, imp))
 			}
 		}
 	}
@@ -196,7 +196,7 @@ func calcAndCreateBloomFilter(total int) bloom.BloomFilter {
 	return bloom.NewBloomFilter(m)
 }
 
-func getAlias(_import *entity.ImportEntity) string {
+func getAlias(_import *obj.ImportObj) string {
 	if _import.WithAlias {
 		return _import.Alias
 	}
@@ -204,6 +204,6 @@ func getAlias(_import *entity.ImportEntity) string {
 	return path.Base(_import.Path)
 }
 
-func isSideEffectImport(_import *entity.ImportEntity) bool {
+func isSideEffectImport(_import *obj.ImportObj) bool {
 	return _import.WithAlias && _import.Alias == "_"
 }

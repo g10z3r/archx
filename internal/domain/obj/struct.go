@@ -1,4 +1,4 @@
-package entity
+package obj
 
 import (
 	"fmt"
@@ -11,35 +11,35 @@ const (
 	NotEmbedded = false
 )
 
-type FieldMetadata struct {
+type FieldObjMetadata struct {
 	LineCount int
 }
 
-type FieldEntity struct {
+type FieldObj struct {
 	Name       string
 	Type       string
-	Embedded   *StructEntity
+	Embedded   *StructObj
 	Visibility bool
-	Metadata   *FieldMetadata
+	Metadata   *FieldObjMetadata
 }
 
-type DependencyEntity struct {
+type DepObj struct {
 	ImportIndex int
 	Usage       int
 }
 
-type StructEntity struct {
+type StructObj struct {
 	start        token.Pos
 	end          token.Pos
 	Name         *string
-	Fields       []*FieldEntity
-	Dependencies map[string]*DependencyEntity
+	Fields       []*FieldObj
+	Dependencies map[string]*DepObj
 	isEmbedded   bool
 }
 
-func (s *StructEntity) AddDependency(importIndex int, element string) {
+func (s *StructObj) AddDependency(importIndex int, element string) {
 	if _, exists := s.Dependencies[element]; !exists {
-		s.Dependencies[element] = &DependencyEntity{
+		s.Dependencies[element] = &DepObj{
 			ImportIndex: importIndex,
 			Usage:       1,
 		}
@@ -50,18 +50,18 @@ func (s *StructEntity) AddDependency(importIndex int, element string) {
 	s.Dependencies[element].Usage++
 }
 
-func NewStructEntity(fset *token.FileSet, res *ast.StructType, isEmbedded bool, name *string) (*StructEntity, []UsedPackage, error) {
+func NewStructObj(fset *token.FileSet, res *ast.StructType, isEmbedded bool, name *string) (*StructObj, []UsedPackage, error) {
 	mapMetaData, err := extractFieldMap(fset, res.Fields.List)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to extract field map: %w", err)
 	}
 
-	var dependencies map[string]*DependencyEntity
+	var dependencies map[string]*DepObj
 	if !isEmbedded {
-		dependencies = make(map[string]*DependencyEntity, len(mapMetaData.usedPackages))
+		dependencies = make(map[string]*DepObj, len(mapMetaData.usedPackages))
 	}
 
-	return &StructEntity{
+	return &StructObj{
 			Name:         name,
 			start:        res.Pos(),
 			end:          res.End(),
@@ -80,11 +80,11 @@ type UsedPackage struct {
 
 type fieldMapMetaData struct {
 	usedPackages []UsedPackage
-	fieldsSet    []*FieldEntity
+	fieldsSet    []*FieldObj
 }
 
 func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMetaData, error) {
-	fields := make([]*FieldEntity, 0, len(fieldList))
+	fields := make([]*FieldObj, 0, len(fieldList))
 	usedPackages := make([]UsedPackage, 0, len(fieldList))
 
 	for _, field := range fieldList {
@@ -98,7 +98,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 		}
 
 		if len(field.Names) == 0 {
-			fields = append(fields, &FieldEntity{
+			fields = append(fields, &FieldObj{
 				Type:       fieldMetaData.Type,
 				Embedded:   fieldMetaData.EmbeddedStruct,
 				Visibility: false,
@@ -107,12 +107,12 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 		}
 
 		for _, name := range field.Names {
-			fields = append(fields, &FieldEntity{
+			fields = append(fields, &FieldObj{
 				Name:       name.Name,
 				Type:       fieldMetaData.Type,
 				Embedded:   fieldMetaData.EmbeddedStruct,
 				Visibility: name.IsExported(),
-				Metadata: &FieldMetadata{
+				Metadata: &FieldObjMetadata{
 					LineCount: calcLineCount(fset, name),
 				},
 			})

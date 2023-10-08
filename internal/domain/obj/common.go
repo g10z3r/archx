@@ -1,4 +1,4 @@
-package entity
+package obj
 
 import (
 	"bytes"
@@ -8,25 +8,25 @@ import (
 	"go/token"
 )
 
-type astEntity interface {
+type astExpr interface {
 	Pos() token.Pos
 	End() token.Pos
 }
 
-func calcLineCount(fset *token.FileSet, res astEntity) int {
-	return fset.Position(res.End()).Line - fset.Position(res.Pos()).Line + 1
+func calcLineCount(fset *token.FileSet, expr astExpr) int {
+	return fset.Position(expr.End()).Line - fset.Position(expr.Pos()).Line + 1
 }
 
 type exprTypeMetaData struct {
 	Type           string
 	UsedPackages   []UsedPackage
-	EmbeddedStruct *StructEntity
+	EmbeddedStruct *StructObj
 }
 
 func ExtractExprAsType(fset *token.FileSet, expr ast.Expr) (*exprTypeMetaData, error) {
 	switch ft := expr.(type) {
 	case *ast.StructType:
-		embedded, usedPackages, err := NewStructEntity(fset, ft, true, nil)
+		embedded, usedPackages, err := NewStructObj(fset, ft, true, nil)
 		if err != nil {
 			return nil, err
 		}
