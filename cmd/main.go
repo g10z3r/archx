@@ -49,25 +49,27 @@ func main() {
 	// scanRepo := mongoScannerRepo.NewSnapshotRepository(collection)
 	// scanService.Perform(ctx, "example/cmd", "github.com/g10z3r/archx")
 
-	colony := anthill.SpawnColony(anthill.DefaultConfig(
-		anthill.WithSelectedDir("example/cmd"),
-	))
+	// colony := anthill.SpawnColony(anthill.DefaultConfig(
+	// 	anthill.WithSelectedDir("example/cmd"),
+	// ))
 
-	if err := colony.Explore("."); err != nil {
-		log.Fatal(err)
-	}
+	compass := anthill.NewCompass()
+	p := compass.Parse()
+	// if err := colony.Explore("."); err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	snapshot := NewSnapshotEntity(colony.Metadata.ModName, len(colony.Packages))
-	fmt.Println(colony.Packages)
-	for _, pkg := range colony.Packages {
-		ent, err := colony.Forage(pkg)
-		if err != nil {
-			log.Fatal(err)
-		}
+	// snapshot := NewSnapshotEntity(colony.Metadata.ModName, len(colony.Packages))
+	// fmt.Println(colony.Packages)
+	// for _, pkg := range colony.Packages {
+	// 	ent, err := colony.Forage(pkg)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
 
-		snapshot.Packages = append(snapshot.Packages, ent)
-	}
+	// 	snapshot.Packages = append(snapshot.Packages, ent)
+	// }
 
-	jsonData, _ := json.Marshal(snapshot)
+	jsonData, _ := json.Marshal(p)
 	fmt.Println(string(jsonData))
 }
