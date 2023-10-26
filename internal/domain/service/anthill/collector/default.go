@@ -29,8 +29,8 @@ func DefaultCollector(options ...CollectorOption) *Collector {
 		ignoredList: config.DefaultIgnoredMap,
 		rootDir:     ".",
 		targetDir:   "",
-		projInfo:    &ProjectInfo{},
-		Packages:    make([]string, 0),
+		info:        &Info{},
+		packageDirs: make([]string, 0),
 	}
 
 	for _, opt := range options {

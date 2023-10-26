@@ -13,67 +13,54 @@ import (
 const goModFileName = "go.mod"
 const goFileExt = ".go"
 
-type ProjectInfo struct {
-	ModuleName  string
-	LangVersion string
-}
-
 type Collector struct {
-	Packages    []string
-	projInfo    *ProjectInfo
+	packageDirs []string
+	info        *Info
 	rootDir     string
 	targetDir   string
 	ignoredList map[string]struct{}
 }
 
-type NewCollectorParam struct {
-	RootDir     string
-	TargetDir   string
-	IgnoredList map[string]struct{}
+func (c *Collector) GetAllPackageDirs() []string {
+	return c.packageDirs
 }
 
-func NewCollector(param *NewCollectorParam) *Collector {
-	return &Collector{
-		ignoredList: param.IgnoredList,
-		rootDir:     param.RootDir,
-		targetDir:   param.TargetDir,
-		projInfo:    &ProjectInfo{},
-		Packages:    make([]string, 0),
-	}
+func (c *Collector) GetInfo() *Info {
+	return c.info
 }
 
-func (c *Collector) Explore() ([]string, error) {
+func (c *Collector) Explore() error {
 	return c.explore(c.rootDir, true)
 }
 
-func (c *Collector) explore(path string, isRoot bool) ([]string, error) {
+func (c *Collector) explore(path string, isRoot bool) error {
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read directory: %w", err)
+		return fmt.Errorf("failed to read directory: %w", err)
 	}
 
 	subdirs, goFilesExist, err := c.scanDir(entries, path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if goFilesExist && strings.HasPrefix(path, c.targetDir) {
-		c.Packages = append(c.Packages, path)
+		c.packageDirs = append(c.packageDirs, path)
 	}
 
 	if err := c.exploreSubDir(subdirs); err != nil {
-		return nil, err
+		return err
 	}
 
 	if !isRoot {
-		return nil, nil
+		return nil
 	}
 
-	if len(c.projInfo.ModuleName) < 1 || len(c.projInfo.LangVersion) < 1 {
-		return nil, errors.New("couldn't find the go.mod file")
+	if len(c.info.ModuleName) < 1 || len(c.info.LangVersion) < 1 {
+		return errors.New("couldn't find the go.mod file")
 	}
 
-	return c.Packages, nil
+	return nil
 }
 
 func (c *Collector) scanDir(entries []os.DirEntry, root string) ([]string, bool, error) {
@@ -108,7 +95,7 @@ func (c *Collector) scanDir(entries []os.DirEntry, root string) ([]string, bool,
 
 func (c *Collector) exploreSubDir(subdirs []string) error {
 	for _, subdir := range subdirs {
-		if _, err := c.explore(subdir, false); err != nil {
+		if err := c.explore(subdir, false); err != nil {
 			return err
 		}
 	}
@@ -128,8 +115,24 @@ func (c *Collector) processGoMod(root string) error {
 		return err
 	}
 
-	c.projInfo.ModuleName = modFileData.Module.Mod.Path
-	c.projInfo.LangVersion = modFileData.Go.Version
+	c.info.ModuleName = modFileData.Module.Mod.Path
+	c.info.LangVersion = modFileData.Go.Version
 
 	return nil
+}
+
+type NewCollectorParam struct {
+	RootDir     string
+	TargetDir   string
+	IgnoredList map[string]struct{}
+}
+
+func NewCollector(param *NewCollectorParam) *Collector {
+	return &Collector{
+		ignoredList: param.IgnoredList,
+		rootDir:     param.RootDir,
+		targetDir:   param.TargetDir,
+		info:        &Info{},
+		packageDirs: make([]string, 0),
+	}
 }

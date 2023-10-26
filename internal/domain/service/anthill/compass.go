@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/collector"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
@@ -45,7 +46,7 @@ func (r *Compass) Subscribe() (<-chan compassEvent, chan struct{}) {
 	return r.eventCh, r.unsubscribeCh
 }
 
-func (c *Compass) Parse() {
+func (c *Compass) Parse(info *collector.Info, targetDir string) {
 	importAlz := &analyzer.ImportAnalyzer{}
 	c.manager.Register(importAlz)
 
@@ -56,7 +57,7 @@ func (c *Compass) Parse() {
 	c.manager.Register(funcAlz)
 
 	fset := token.NewFileSet()
-	pkg, err := parser.ParseDir(fset, "./example/cmd", nil, parser.AllErrors)
+	pkg, err := parser.ParseDir(fset, targetDir, nil, parser.AllErrors)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,7 +65,7 @@ func (c *Compass) Parse() {
 	pkgObj := &obj.PackageObj{}
 	for _, pkgAst := range pkg {
 		for fileName, fileAst := range pkgAst.Files {
-			fileObj := obj.NewFileObj(fset, "github.com/g10z3r/archx", fileName)
+			fileObj := obj.NewFileObj(fset, info.ModuleName, fileName)
 			pkgObj.AppendFile(fileObj)
 
 			vis := analyzer.NewVisitor(fileObj, c.manager.analyzers)

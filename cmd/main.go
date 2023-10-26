@@ -1,10 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"sync"
+	"time"
 
+	"github.com/g10z3r/archx/internal/domain/service/anthill"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/collector"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
 )
 
 var ignoredMap = map[string]struct{}{
@@ -53,19 +58,46 @@ func main() {
 	// 	anthill.WithSelectedDir("example/cmd"),
 	// ))
 
+	compass := anthill.NewCompass()
 	clct := collector.DefaultCollector(
 		collector.WithTargetDir("example/cmd"),
 	)
-	dirs, err := clct.Explore()
-	if err != nil {
+	if err := clct.Explore(); err != nil {
 		log.Fatal(err)
 	}
 
-	for _, p := range dirs {
-		fmt.Println(p)
-	}
+	var wg sync.WaitGroup
 
-	// compass := anthill.NewCompass()
+	eventCh, unsubscribeCh := compass.Subscribe()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case e := <-eventCh:
+				switch ev := e.(type) {
+				case *event.PackageFormedEvent:
+					jsonData, err := json.Marshal(ev.Package)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					fmt.Println(string(jsonData))
+
+				default:
+					fmt.Printf("Unknown event type: %s\n", e.Name())
+				}
+			case <-unsubscribeCh:
+				return
+			}
+		}
+	}()
+
+	for _, p := range clct.GetAllPackageDirs() {
+		compass.Parse(clct.GetInfo(), p)
+		time.Sleep(time.Second)
+		close(unsubscribeCh)
+	}
 
 	// var wg sync.WaitGroup
 	// eventCh, unsubscribeCh := compass.Subscribe()
