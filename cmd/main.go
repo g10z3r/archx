@@ -54,10 +54,6 @@ func main() {
 	// scanRepo := mongoScannerRepo.NewSnapshotRepository(collection)
 	// scanService.Perform(ctx, "example/cmd", "github.com/g10z3r/archx")
 
-	// colony := anthill.SpawnColony(anthill.DefaultConfig(
-	// 	anthill.WithSelectedDir("example/cmd"),
-	// ))
-
 	compass := anthill.NewCompass()
 	clct := collector.DefaultCollector(
 		collector.WithTargetDir("example/cmd"),
@@ -98,50 +94,4 @@ func main() {
 		time.Sleep(time.Second)
 		close(unsubscribeCh)
 	}
-
-	// var wg sync.WaitGroup
-	// eventCh, unsubscribeCh := compass.Subscribe()
-	// wg.Add(1)
-	// go func() {
-	// 	defer wg.Done()
-	// 	for {
-	// 		select {
-	// 		case e := <-eventCh:
-	// 			switch ev := e.(type) {
-	// 			case *event.PackageFormedEvent:
-	// 				jsonData, err := json.Marshal(ev.Package)
-	// 				if err != nil {
-	// 					log.Fatal(err)
-	// 				}
-
-	// 				fmt.Println(string(jsonData))
-
-	// 			default:
-	// 				fmt.Printf("Unknown event type: %s\n", e.Name())
-	// 			}
-	// 		case <-unsubscribeCh:
-	// 			return
-	// 		}
-	// 	}
-	// }()
-
-	// compass.Parse()
-	// time.Sleep(time.Second)
-	// close(unsubscribeCh)
-	// wg.Wait()
-
-	// if err := colony.Explore("."); err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// snapshot := NewSnapshotEntity(colony.Metadata.ModName, len(colony.Packages))
-	// fmt.Println(colony.Packages)
-	// for _, pkg := range colony.Packages {
-	// 	ent, err := colony.Forage(pkg)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-
-	// 	snapshot.Packages = append(snapshot.Packages, ent)
-	// }
 }
