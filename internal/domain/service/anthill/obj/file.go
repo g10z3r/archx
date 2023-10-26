@@ -24,6 +24,10 @@ type FileObjMatadata struct {
 	Module string
 }
 
+// TODO
+// Add MethodIndexes, FuncIndexes, StructIndexes, ... FieldIndexes (?)
+// Move Imports to Entities
+
 type FileObj struct {
 	Name     string
 	FileSet  *token.FileSet

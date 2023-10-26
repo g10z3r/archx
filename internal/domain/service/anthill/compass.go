@@ -64,10 +64,7 @@ func (c *Compass) Parse(info *collector.Info, targetDir string) {
 	}
 
 	for _, pkgAst := range pkg {
-		pkgObj := &obj.PackageObj{
-			Name: pkgAst.Name,
-			Path: targetDir,
-		}
+		pkgObj := obj.NewPackageObj(pkgAst, targetDir)
 
 		for fileName, fileAst := range pkgAst.Files {
 			fileObj := obj.NewFileObj(fset, info.ModuleName, filepath.Base(fileName))
