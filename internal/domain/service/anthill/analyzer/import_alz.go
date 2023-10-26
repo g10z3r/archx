@@ -18,7 +18,7 @@ func (a *ImportAnalyzer) Check(node ast.Node) bool {
 	return ok
 }
 
-func (a *ImportAnalyzer) Analyze(vtx *VisitorContext, node ast.Node) Object {
+func (a *ImportAnalyzer) Analyze(vtx *VisitorMetadata, node ast.Node) Object {
 	_import, _ := node.(*ast.ImportSpec)
 
 	if _import.Path == nil && _import.Path.Value == "" {
@@ -34,5 +34,9 @@ func (a *ImportAnalyzer) Analyze(vtx *VisitorContext, node ast.Node) Object {
 		return obj.NewImportObj(_import, obj.ImportTypeSideEffect)
 	}
 
-	return nil
+	if !strings.HasPrefix(_import.Path.Value, vtx.ModName) {
+		return obj.NewImportObj(_import, obj.ImportTypeRegular)
+	}
+
+	return obj.NewImportObj(_import, obj.ImportTypeInternal)
 }

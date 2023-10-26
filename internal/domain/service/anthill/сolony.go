@@ -3,13 +3,10 @@ package anthill
 import (
 	"errors"
 	"fmt"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 	"golang.org/x/mod/modfile"
 )
 
@@ -126,20 +123,20 @@ func (c *Colony) processGoMod(root string) error {
 	return nil
 }
 
-func (c *Colony) Forage(dirPath string) (*obj.PackageObj, error) {
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, dirPath, nil, parser.AllErrors)
-	if err != nil {
-		return nil, err
-	}
+// func (c *Colony) Forage(dirPath string) (*obj.PackageObj, error) {
+// 	fset := token.NewFileSet()
+// 	pkgs, err := parser.ParseDir(fset, dirPath, nil, parser.AllErrors)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	var pkgEntity *obj.PackageObj
-	forager := newForager(fset)
+// 	var pkgEntity *obj.PackageObj
+// 	forager := newForager(fset)
 
-	for _, pkg := range pkgs {
-		pkgEntity = forager.process(pkg, dirPath, c.Metadata.ModName)
-		break
-	}
+// 	for _, pkg := range pkgs {
+// 		pkgEntity = forager.process(pkg, dirPath, c.Metadata.ModName)
+// 		break
+// 	}
 
-	return pkgEntity, nil
-}
+// 	return pkgEntity, nil
+// }

@@ -1,7 +1,6 @@
 package analyzer
 
 import (
-	"fmt"
 	"go/ast"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
@@ -27,7 +26,7 @@ func (a *StructAnalyzer) Check(node ast.Node) bool {
 	return true
 }
 
-func (a *StructAnalyzer) Analyze(vtx *VisitorContext, spec ast.Node) Object {
+func (a *StructAnalyzer) Analyze(vtx *VisitorMetadata, spec ast.Node) Object {
 	typeSpec, ok := spec.(*ast.TypeSpec)
 	if !ok {
 		return nil
@@ -38,17 +37,16 @@ func (a *StructAnalyzer) Analyze(vtx *VisitorContext, spec ast.Node) Object {
 		return nil
 	}
 
-	fmt.Println(typeSpec.Name.Name)
-	structEntity, usedPackages, err := obj.NewStructObj(vtx.fset, t, obj.NotEmbedded, &typeSpec.Name.Name)
+	structObj, usedPackages, err := obj.NewStructObj(vtx.fset, t, obj.NotEmbedded, &typeSpec.Name.Name)
 	if err != nil {
 		return nil
 	}
 
 	for _, pkg := range usedPackages {
 		if index, exists := vtx.Imports.RegularImportsMeta[pkg.Alias]; exists {
-			structEntity.AddDependency(index, pkg.Element)
+			structObj.AddDependency(index, pkg.Element)
 		}
 	}
 
-	return structEntity
+	return structObj
 }

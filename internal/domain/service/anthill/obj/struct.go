@@ -37,6 +37,10 @@ type StructObj struct {
 	isEmbedded   bool
 }
 
+func (s *StructObj) Type() string {
+	return "struct"
+}
+
 func (s *StructObj) AddDependency(importIndex int, element string) {
 	if _, exists := s.Dependencies[element]; !exists {
 		s.Dependencies[element] = &DepObj{

@@ -29,6 +29,10 @@ type FuncObj struct {
 	Metadata     *FuncObjMetadata
 }
 
+func (s *FuncObj) Type() string {
+	return "func"
+}
+
 func (f *FuncObj) AddDependency(importIndex int, element string) {
 	if _, exists := f.Dependencies[element]; !exists {
 		f.Dependencies[element] = &DepObj{

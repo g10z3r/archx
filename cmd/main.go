@@ -1,16 +1,12 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type SnapshotEntity struct {
@@ -27,21 +23,21 @@ func NewSnapshotEntity(mod string, pkgCount int) *SnapshotEntity {
 }
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	clientOptions := options.Client().ApplyURI("mongodb://ant:password@localhost:27017")
+	// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// defer cancel()
+	// clientOptions := options.Client().ApplyURI("mongodb://ant:password@localhost:27017")
 
-	client, err := mongo.Connect(ctx, clientOptions)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// client, err := mongo.Connect(ctx, clientOptions)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	err = client.Ping(ctx, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// err = client.Ping(ctx, nil)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	fmt.Println("Successfully connected to MongoDB!")
+	// fmt.Println("Successfully connected to MongoDB!")
 
 	// db := client.Database("archant")
 	// collection := db.Collection("someproject")

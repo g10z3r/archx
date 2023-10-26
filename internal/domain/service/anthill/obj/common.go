@@ -14,6 +14,7 @@ type astExpr interface {
 }
 
 func calcLineCount(fset *token.FileSet, expr astExpr) int {
+	fmt.Println(fset)
 	return fset.Position(expr.End()).Line - fset.Position(expr.Pos()).Line + 1
 }
 

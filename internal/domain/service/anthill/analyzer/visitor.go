@@ -1,10 +1,9 @@
 package analyzer
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
-
-	"github.com/g10z3r/archx/pkg/dsl"
 )
 
 type VisitorImports struct {
@@ -19,7 +18,7 @@ type VisitorStats struct {
 	Interfaces int
 }
 
-type VisitorContext struct {
+type VisitorMetadata struct {
 	fset     *token.FileSet
 	ModName  string
 	FileName string
@@ -31,14 +30,15 @@ type VisitorContext struct {
 type AnalyzerMap map[string]Analyzer
 
 type Visitor struct {
-	context   *VisitorContext
+	metadata  *VisitorMetadata
 	analyzers AnalyzerMap
-	bucket    dsl.Map[string, []Object]
+	bucket    map[string][]Object
 }
 
 func NewVisitor(fset *token.FileSet, analyzers AnalyzerMap, fileName string) *Visitor {
 	return &Visitor{
-		context: &VisitorContext{
+		analyzers: analyzers,
+		metadata: &VisitorMetadata{
 			fset:     fset,
 			FileName: fileName,
 			Imports: &VisitorImports{
@@ -47,19 +47,26 @@ func NewVisitor(fset *token.FileSet, analyzers AnalyzerMap, fileName string) *Vi
 				RegularImportsMeta: make(map[string]int),
 			},
 		},
-		analyzers: analyzers,
+		bucket: make(map[string][]Object),
 	}
 }
 
 func (v *Visitor) Visit(node ast.Node) ast.Visitor {
 	for _, analyzer := range v.analyzers {
 		if ok := analyzer.Check(node); ok {
-			res := analyzer.Analyze(v.context, node)
-
-			bucket, _ := v.bucket.Load(analyzer.Name())
-			v.bucket.Store(analyzer.Name(), append(bucket, res))
+			obj := analyzer.Analyze(v.metadata, node)
+			v.bucket[analyzer.Name()] = append(v.bucket[analyzer.Name()], obj)
 			break
 		}
 	}
 	return v
+}
+
+func (v *Visitor) Unload(sectionKey string) []Object {
+	fmt.Println(v.bucket)
+	if data, ok := v.bucket[sectionKey]; ok {
+		return data
+	}
+
+	return nil
 }

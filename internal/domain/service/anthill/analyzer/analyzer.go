@@ -11,5 +11,5 @@ type Context interface{}
 type Analyzer interface {
 	Name() string
 	Check(node ast.Node) bool
-	Analyze(ctx *VisitorContext, spec ast.Node) Object
+	Analyze(ctx *VisitorMetadata, spec ast.Node) Object
 }

@@ -2,15 +2,26 @@ package obj
 
 import (
 	"go/ast"
-	"path/filepath"
 	"strings"
 )
 
+type ImportType int
+
+const (
+	ImportTypeRegular ImportType = iota
+	ImportTypeInternal
+	ImportTypeSideEffect
+)
+
 type ImportObj struct {
-	File      string
-	Path      string
-	Alias     string
-	WithAlias bool
+	Path       string
+	Alias      string
+	WithAlias  bool
+	ImportType ImportType
+}
+
+func (e ImportObj) Type() string {
+	return "import"
 }
 
 func (e *ImportObj) CheckAndTrim(modName string) bool {
@@ -26,7 +37,7 @@ func (e *ImportObj) CheckAndTrim(modName string) bool {
 	return true
 }
 
-func NewImportObj(fileName string, importSpec *ast.ImportSpec) *ImportObj {
+func NewImportObj(importSpec *ast.ImportSpec, typ ImportType) *ImportObj {
 	var isWithAlias bool
 	var alias string
 
@@ -35,9 +46,9 @@ func NewImportObj(fileName string, importSpec *ast.ImportSpec) *ImportObj {
 		isWithAlias = true
 	}
 	return &ImportObj{
-		File:      filepath.Base(fileName),
-		Path:      strings.Trim(importSpec.Path.Value, `"`),
-		Alias:     alias,
-		WithAlias: isWithAlias,
+		Path:       strings.Trim(importSpec.Path.Value, `"`),
+		Alias:      alias,
+		WithAlias:  isWithAlias,
+		ImportType: typ,
 	}
 }
