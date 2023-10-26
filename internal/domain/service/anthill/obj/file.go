@@ -5,9 +5,10 @@ import (
 )
 
 type FileObjImports struct {
-	SideEffectImports  []string
-	RegularImports     []string
-	RegularImportsMeta map[string]int
+	InternalImports     []string
+	ExternalImports     []string
+	SideEffectImports   []string
+	InternalImportsMeta map[string]int
 }
 
 type FileobjEntities struct {
@@ -37,9 +38,10 @@ func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 		Name:    fileName,
 		FileSet: fset,
 		Imports: &FileObjImports{
-			SideEffectImports:  make([]string, 0),
-			RegularImports:     make([]string, 0),
-			RegularImportsMeta: make(map[string]int),
+			InternalImports:     make([]string, 0),
+			ExternalImports:     make([]string, 0),
+			SideEffectImports:   make([]string, 0),
+			InternalImportsMeta: make(map[string]int),
 		},
 		Entities: &FileobjEntities{
 			Structs:   make([]*StructObj, 0),

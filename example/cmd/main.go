@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	_ "github.com/g10z3r/archx/example/internal/api"
 	"github.com/g10z3r/archx/example/internal/data"
 	api2WithAnotherAlias "github.com/g10z3r/archx/example/internal/data/api"
@@ -54,6 +56,7 @@ func (p *Person) ChangeFirstName(newFirstName string) *Person {
 }
 
 func (p *Person) ChangeLastName(newLastName string, d data.PersonalInfo) *Person {
+	os.Getenv("")
 	metadata.MetadataSome()
 	if newLastName != p.LastName {
 		p.LastName = newLastName

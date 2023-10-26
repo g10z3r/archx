@@ -69,13 +69,13 @@ func (c *Compass) Parse() {
 	}
 
 	pkgObj := &obj.PackageObj{}
-	for _, p := range pkg {
-		for _, f := range p.Files {
-			fileObj := obj.NewFileObj(fset, "github.com/g10z3r/archx", f.Name.Name)
+	for _, pkgAst := range pkg {
+		for fileName, fileAst := range pkgAst.Files {
+			fileObj := obj.NewFileObj(fset, "github.com/g10z3r/archx", fileName)
 			pkgObj.AppendFile(fileObj)
 
 			vis := analyzer.NewVisitor(fileObj, c.manager.analyzers)
-			ast.Walk(vis, f)
+			ast.Walk(vis, fileAst)
 		}
 	}
 

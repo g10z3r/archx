@@ -8,7 +8,7 @@ import (
 type ImportType int
 
 const (
-	ImportTypeRegular ImportType = iota
+	ImportTypeExternal ImportType = iota
 	ImportTypeInternal
 	ImportTypeSideEffect
 )
