@@ -1,7 +1,6 @@
 package analyzer
 
 import (
-	"fmt"
 	"go/ast"
 	"log"
 	"path"
@@ -24,16 +23,17 @@ func (a *ImportAnalyzer) Check(node ast.Node) bool {
 func (a *ImportAnalyzer) Save(f *obj.FileObj, object Object) {
 	importObj, ok := object.(*obj.ImportObj)
 	if !ok {
-		fmt.Println(object.Type())
 		log.Fatal("not a import objects")
 	}
 
 	switch importObj.ImportType {
 	case obj.ImportTypeInternal:
 		f.Imports.InternalImportsMeta[getAlias(importObj)] = len(f.Imports.InternalImports)
-		f.Imports.InternalImports = append(f.Imports.InternalImports, importObj.Path)
+		f.Imports.InternalImports = append(f.Imports.InternalImports, importObj.Path[len(f.Metadata.Module):])
+
 	case obj.ImportTypeExternal:
 		f.Imports.ExternalImports = append(f.Imports.ExternalImports, importObj.Path)
+
 	case obj.ImportTypeSideEffect:
 		f.Imports.SideEffectImports = append(f.Imports.SideEffectImports, importObj.Path)
 	}

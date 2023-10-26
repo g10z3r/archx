@@ -19,7 +19,14 @@ func (a *FunctionAnalyzer) Check(node ast.Node) bool {
 	return ok
 }
 
-func (a *FunctionAnalyzer) Save(f *obj.FileObj, obj Object) {}
+func (a *FunctionAnalyzer) Save(f *obj.FileObj, object Object) {
+	funcObj, ok := object.(*obj.FuncObj)
+	if !ok {
+		log.Fatal("not a func objects")
+	}
+
+	f.Entities.Functions = append(f.Entities.Functions, funcObj)
+}
 
 func (a *FunctionAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {
 	funcDecl, _ := node.(*ast.FuncDecl)

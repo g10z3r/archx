@@ -1,7 +1,6 @@
 package anthill
 
 import (
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -54,13 +53,11 @@ func (c *Compass) Parse() {
 	importAlz := &analyzer.ImportAnalyzer{}
 	c.manager.Register(importAlz)
 
-	fmt.Println(len(c.manager.analyzers))
-
 	structAlz := &analyzer.StructAnalyzer{}
 	c.manager.Register(structAlz)
 
-	// funcAlz := &analyzer.FunctionAnalyzer{}
-	// c.manager.Register(funcAlz)
+	funcAlz := &analyzer.FunctionAnalyzer{}
+	c.manager.Register(funcAlz)
 
 	fset := token.NewFileSet()
 	pkg, err := parser.ParseDir(fset, "./example/cmd", nil, parser.AllErrors)

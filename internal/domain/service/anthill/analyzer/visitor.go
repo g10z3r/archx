@@ -1,8 +1,8 @@
 package analyzer
 
 import (
-	"fmt"
 	"go/ast"
+	"log"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
@@ -22,12 +22,15 @@ func NewVisitor(f *obj.FileObj, analyzers map[string]Analyzer) *Visitor {
 func (v *Visitor) Visit(node ast.Node) ast.Visitor {
 	for _, analyzer := range v.analyzerMap {
 		if ok := analyzer.Check(node); ok {
-
 			obj := analyzer.Analyze(v.fileObj, node)
-			fmt.Println(analyzer.Name())
-			analyzer.Save(v.fileObj, obj) // Add ok return
+			if obj != nil {
+				analyzer.Save(v.fileObj, obj) // Add ok return
+				break
+			}
 
+			log.Fatal("got nil object")
 			break
+
 		}
 	}
 	return v
