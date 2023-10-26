@@ -3,9 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"sync"
 	"time"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
@@ -50,7 +53,37 @@ func main() {
 	// ))
 
 	compass := anthill.NewCompass()
-	p := compass.Parse()
+
+	var wg sync.WaitGroup
+	eventCh, unsubscribeCh := compass.Subscribe()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case e := <-eventCh:
+				switch ev := e.(type) {
+				case *event.PackageFormedEvent:
+					jsonData, err := json.Marshal(ev.Package)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					fmt.Println(string(jsonData))
+
+				default:
+					fmt.Printf("Unknown event type: %s\n", e.Name())
+				}
+			case <-unsubscribeCh:
+				return
+			}
+		}
+	}()
+
+	compass.Parse()
+	time.Sleep(time.Second)
+	close(unsubscribeCh)
+	wg.Wait()
 	// if err := colony.Explore("."); err != nil {
 	// 	log.Fatal(err)
 	// }
@@ -65,7 +98,4 @@ func main() {
 
 	// 	snapshot.Packages = append(snapshot.Packages, ent)
 	// }
-
-	jsonData, _ := json.Marshal(p)
-	fmt.Println(string(jsonData))
 }

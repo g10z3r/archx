@@ -8,6 +8,7 @@ import (
 	"log"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
@@ -18,12 +19,19 @@ type Manager struct {
 }
 
 func (m *Manager) Register(a analyzer.Analyzer) {
-	alz[a.Name()] = a
+	m.analyzers[a.Name()] = a
+}
+
+type compassEvent interface {
+	Name() string
 }
 
 type Compass struct {
 	fset    *token.FileSet
 	manager *Manager
+
+	eventCh       chan compassEvent
+	unsubscribeCh chan struct{}
 }
 
 func NewCompass() *Compass {
@@ -32,37 +40,21 @@ func NewCompass() *Compass {
 		manager: &Manager{
 			analyzers: map[string]analyzer.Analyzer{},
 		},
+
+		eventCh:       make(chan compassEvent, 1),
+		unsubscribeCh: make(chan struct{}),
 	}
 }
 
-func (c *Compass) Visit(node ast.Node) ast.Visitor {
-	switch n := node.(type) {
-	case *ast.ImportSpec:
-
-	case *ast.TypeSpec:
-		if structType, ok := n.Type.(*ast.StructType); ok {
-			obj.NewStructObj(c.fset, structType, obj.NotEmbedded, &n.Name.Name)
-		}
-
-		fmt.Println(n.Name.Name)
-		// Handle ident nodes
-
-	case *ast.FuncDecl:
-		fmt.Println(n.Name.Name)
-		// Handle func declaration nodes
-
-	// Add cases for other node types...
-
-	default:
-		return c
-	}
-
-	return c
+func (r *Compass) Subscribe() (<-chan compassEvent, chan struct{}) {
+	return r.eventCh, r.unsubscribeCh
 }
 
-func (c *Compass) Parse() *obj.PackageObj {
+func (c *Compass) Parse() {
 	importAlz := &analyzer.ImportAnalyzer{}
 	c.manager.Register(importAlz)
+
+	fmt.Println(len(c.manager.analyzers))
 
 	structAlz := &analyzer.StructAnalyzer{}
 	c.manager.Register(structAlz)
@@ -76,26 +68,20 @@ func (c *Compass) Parse() *obj.PackageObj {
 		log.Fatal(err)
 	}
 
-	packa := &obj.PackageObj{}
+	pkgObj := &obj.PackageObj{}
 	for _, p := range pkg {
 		for _, f := range p.Files {
-			vis := analyzer.NewVisitor(fset, alz, f.Name.Name)
-			ast.Walk(vis, f)
+			fileObj := obj.NewFileObj(fset, "github.com/g10z3r/archx", f.Name.Name)
+			pkgObj.AppendFile(fileObj)
 
-			for analyzerName := range alz {
-				switch analyzerName {
-				case "import":
-					data := toPkgImports(vis.Unload(analyzerName))
-					packa.Imports = append(packa.Imports, data...)
-				case "struct":
-					data := toPkgStructs(vis.Unload(analyzerName))
-					packa.Structs = append(packa.Structs, data...)
-				}
-			}
+			vis := analyzer.NewVisitor(fileObj, c.manager.analyzers)
+			ast.Walk(vis, f)
 		}
 	}
 
-	return packa
+	c.eventCh <- &event.PackageFormedEvent{
+		Package: pkgObj,
+	}
 }
 
 func toPkgStructs(data []analyzer.Object) []*obj.StructObj {

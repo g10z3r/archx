@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	"go/ast"
+	"log"
 	"strings"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
@@ -18,7 +19,25 @@ func (a *ImportAnalyzer) Check(node ast.Node) bool {
 	return ok
 }
 
-func (a *ImportAnalyzer) Analyze(vtx *VisitorMetadata, node ast.Node) Object {
+func (a *ImportAnalyzer) Save(f *obj.FileObj, object Object) {
+	importObj, ok := object.(*obj.ImportObj)
+	if !ok {
+		log.Fatal("not a import objects")
+	}
+
+	switch importObj.ImportType {
+	case obj.ImportTypeInternal:
+		// f.Imports.RegularImportsMeta[importObj.Alias] = len(f.Imports.RegularImports)
+		// f.Imports.RegularImports = append(f.Imports.RegularImports, importObj.Path)
+	case obj.ImportTypeRegular:
+		f.Imports.RegularImportsMeta[importObj.Alias] = len(f.Imports.RegularImports)
+		f.Imports.RegularImports = append(f.Imports.RegularImports, importObj.Path)
+	case obj.ImportTypeSideEffect:
+		f.Imports.SideEffectImports = append(f.Imports.SideEffectImports, importObj.Path)
+	}
+}
+
+func (a *ImportAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {
 	_import, _ := node.(*ast.ImportSpec)
 
 	if _import.Path == nil && _import.Path.Value == "" {
@@ -26,7 +45,7 @@ func (a *ImportAnalyzer) Analyze(vtx *VisitorMetadata, node ast.Node) Object {
 	}
 
 	path := strings.Trim(_import.Path.Value, `"`)
-	if !strings.HasPrefix(path, vtx.ModName) {
+	if !strings.HasPrefix(path, f.Metadata.Module) {
 		return nil
 	}
 
@@ -34,7 +53,7 @@ func (a *ImportAnalyzer) Analyze(vtx *VisitorMetadata, node ast.Node) Object {
 		return obj.NewImportObj(_import, obj.ImportTypeSideEffect)
 	}
 
-	if !strings.HasPrefix(_import.Path.Value, vtx.ModName) {
+	if !strings.HasPrefix(_import.Path.Value, f.Metadata.Module) {
 		return obj.NewImportObj(_import, obj.ImportTypeRegular)
 	}
 

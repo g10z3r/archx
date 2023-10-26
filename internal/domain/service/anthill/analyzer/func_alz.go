@@ -19,7 +19,9 @@ func (a *FunctionAnalyzer) Check(node ast.Node) bool {
 	return ok
 }
 
-func (a *FunctionAnalyzer) Analyze(vtx *VisitorMetadata, node ast.Node) Object {
+func (a *FunctionAnalyzer) Save(f *obj.FileObj, obj Object) {}
+
+func (a *FunctionAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {
 	funcDecl, _ := node.(*ast.FuncDecl)
 
 	var parentStruct *ast.Ident
@@ -35,14 +37,14 @@ func (a *FunctionAnalyzer) Analyze(vtx *VisitorMetadata, node ast.Node) Object {
 		}
 	}
 
-	params, deps, err := processFuncParams(vtx.fset, funcDecl, vtx.Imports.RegularImportsMeta)
+	params, deps, err := processFuncParams(f.FileSet, funcDecl, f.Imports.RegularImportsMeta)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	funcObj := obj.NewFuncObj(vtx.fset, funcDecl, params, deps, parentStruct)
+	funcObj := obj.NewFuncObj(f.FileSet, funcDecl, params, deps, parentStruct)
 
-	if err := inspectFuncBody(funcDecl, funcObj, vtx.Imports.RegularImportsMeta); err != nil {
+	if err := inspectFuncBody(funcDecl, funcObj, f.Imports.RegularImportsMeta); err != nil {
 		log.Fatal(err)
 	}
 

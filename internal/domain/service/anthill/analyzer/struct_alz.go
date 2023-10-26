@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	"go/ast"
+	"log"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
@@ -26,7 +27,16 @@ func (a *StructAnalyzer) Check(node ast.Node) bool {
 	return true
 }
 
-func (a *StructAnalyzer) Analyze(vtx *VisitorMetadata, spec ast.Node) Object {
+func (a *StructAnalyzer) Save(f *obj.FileObj, object Object) {
+	structObj, ok := object.(*obj.StructObj)
+	if !ok {
+		log.Fatal("not a struct objects")
+	}
+
+	f.Entities.Structs = append(f.Entities.Structs, structObj)
+}
+
+func (a *StructAnalyzer) Analyze(f *obj.FileObj, spec ast.Node) Object {
 	typeSpec, ok := spec.(*ast.TypeSpec)
 	if !ok {
 		return nil
@@ -37,13 +47,13 @@ func (a *StructAnalyzer) Analyze(vtx *VisitorMetadata, spec ast.Node) Object {
 		return nil
 	}
 
-	structObj, usedPackages, err := obj.NewStructObj(vtx.fset, t, obj.NotEmbedded, &typeSpec.Name.Name)
+	structObj, usedPackages, err := obj.NewStructObj(f.FileSet, t, obj.NotEmbedded, &typeSpec.Name.Name)
 	if err != nil {
 		return nil
 	}
 
 	for _, pkg := range usedPackages {
-		if index, exists := vtx.Imports.RegularImportsMeta[pkg.Alias]; exists {
+		if index, exists := f.Imports.RegularImportsMeta[pkg.Alias]; exists {
 			structObj.AddDependency(index, pkg.Element)
 		}
 	}
