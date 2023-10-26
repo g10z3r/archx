@@ -46,7 +46,7 @@ func (c *Colony) explore(path string, isRoot bool) error {
 		return err
 	}
 
-	if goFilesExist && strings.HasPrefix(path, c.config.selectedDir) {
+	if goFilesExist && strings.HasPrefix(path, c.config.targetDir) {
 		c.Packages = append(c.Packages, path)
 	}
 

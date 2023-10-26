@@ -1,28 +1,29 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"sync"
-	"time"
 
-	"github.com/g10z3r/archx/internal/domain/service/anthill"
-	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
-	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/collector"
 )
 
-type SnapshotEntity struct {
-	Timestamp int64
-	BasePath  string
-	Packages  []*obj.PackageObj
-}
+var ignoredMap = map[string]struct{}{
+	".git":    {},
+	".docker": {},
 
-func NewSnapshotEntity(mod string, pkgCount int) *SnapshotEntity {
-	return &SnapshotEntity{
-		Timestamp: time.Now().Unix(),
-		BasePath:  mod,
-	}
+	".vscode":  {},
+	".idea":    {},
+	".eclipse": {},
+
+	"dist":    {},
+	"docker":  {},
+	"assets":  {},
+	"vendor":  {},
+	"build":   {},
+	"scripts": {},
+	"ci":      {},
+	"log":     {},
+	"logs":    {},
 }
 
 func main() {
@@ -52,38 +53,51 @@ func main() {
 	// 	anthill.WithSelectedDir("example/cmd"),
 	// ))
 
-	compass := anthill.NewCompass()
+	clct := collector.DefaultCollector(
+		collector.WithTargetDir("example/cmd"),
+	)
+	dirs, err := clct.Explore()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	var wg sync.WaitGroup
-	eventCh, unsubscribeCh := compass.Subscribe()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case e := <-eventCh:
-				switch ev := e.(type) {
-				case *event.PackageFormedEvent:
-					jsonData, err := json.Marshal(ev.Package)
-					if err != nil {
-						log.Fatal(err)
-					}
+	for _, p := range dirs {
+		fmt.Println(p)
+	}
 
-					fmt.Println(string(jsonData))
+	// compass := anthill.NewCompass()
 
-				default:
-					fmt.Printf("Unknown event type: %s\n", e.Name())
-				}
-			case <-unsubscribeCh:
-				return
-			}
-		}
-	}()
+	// var wg sync.WaitGroup
+	// eventCh, unsubscribeCh := compass.Subscribe()
+	// wg.Add(1)
+	// go func() {
+	// 	defer wg.Done()
+	// 	for {
+	// 		select {
+	// 		case e := <-eventCh:
+	// 			switch ev := e.(type) {
+	// 			case *event.PackageFormedEvent:
+	// 				jsonData, err := json.Marshal(ev.Package)
+	// 				if err != nil {
+	// 					log.Fatal(err)
+	// 				}
 
-	compass.Parse()
-	time.Sleep(time.Second)
-	close(unsubscribeCh)
-	wg.Wait()
+	// 				fmt.Println(string(jsonData))
+
+	// 			default:
+	// 				fmt.Printf("Unknown event type: %s\n", e.Name())
+	// 			}
+	// 		case <-unsubscribeCh:
+	// 			return
+	// 		}
+	// 	}
+	// }()
+
+	// compass.Parse()
+	// time.Sleep(time.Second)
+	// close(unsubscribeCh)
+	// wg.Wait()
+
 	// if err := colony.Explore("."); err != nil {
 	// 	log.Fatal(err)
 	// }

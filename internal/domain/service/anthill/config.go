@@ -26,7 +26,7 @@ type ConfigOption func(*Config)
 type Config struct {
 	ignoredList map[string]struct{}
 	timeout     time.Duration
-	selectedDir string
+	targetDir   string
 }
 
 func WithIgnoredList(list ...string) ConfigOption {
@@ -45,7 +45,7 @@ func WithTimeout(timeout time.Duration) ConfigOption {
 
 func WithSelectedDir(dir string) ConfigOption {
 	return func(c *Config) {
-		c.selectedDir = dir
+		c.targetDir = dir
 	}
 }
 

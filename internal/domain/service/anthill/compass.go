@@ -11,8 +11,6 @@ import (
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
-var alz = map[string]analyzer.Analyzer{}
-
 type Manager struct {
 	analyzers map[string]analyzer.Analyzer
 }
@@ -26,7 +24,6 @@ type compassEvent interface {
 }
 
 type Compass struct {
-	fset    *token.FileSet
 	manager *Manager
 
 	eventCh       chan compassEvent
@@ -35,7 +32,6 @@ type Compass struct {
 
 func NewCompass() *Compass {
 	return &Compass{
-		fset: token.NewFileSet(),
 		manager: &Manager{
 			analyzers: map[string]analyzer.Analyzer{},
 		},
@@ -79,23 +75,4 @@ func (c *Compass) Parse() {
 	c.eventCh <- &event.PackageFormedEvent{
 		Package: pkgObj,
 	}
-}
-
-func toPkgStructs(data []analyzer.Object) []*obj.StructObj {
-	dataOutput := make([]*obj.StructObj, 0, len(data))
-
-	for _, structObj := range data {
-		dataOutput = append(dataOutput, structObj.(*obj.StructObj))
-	}
-
-	return dataOutput
-}
-
-func toPkgImports(data []analyzer.Object) []string {
-	dataOutput := make([]string, 0, len(data))
-	for _, importObj := range data {
-		dataOutput = append(dataOutput, importObj.(*obj.ImportObj).Path)
-	}
-
-	return dataOutput
 }
