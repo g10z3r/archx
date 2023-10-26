@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"log"
+	"path/filepath"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/collector"
@@ -62,18 +63,22 @@ func (c *Compass) Parse(info *collector.Info, targetDir string) {
 		log.Fatal(err)
 	}
 
-	pkgObj := &obj.PackageObj{}
 	for _, pkgAst := range pkg {
+		pkgObj := &obj.PackageObj{
+			Name: pkgAst.Name,
+			Path: targetDir,
+		}
+
 		for fileName, fileAst := range pkgAst.Files {
-			fileObj := obj.NewFileObj(fset, info.ModuleName, fileName)
+			fileObj := obj.NewFileObj(fset, info.ModuleName, filepath.Base(fileName))
 			pkgObj.AppendFile(fileObj)
 
 			vis := analyzer.NewVisitor(fileObj, c.manager.analyzers)
 			ast.Walk(vis, fileAst)
 		}
-	}
 
-	c.eventCh <- &event.PackageFormedEvent{
-		Package: pkgObj,
+		c.eventCh <- &event.PackageFormedEvent{
+			Package: pkgObj,
+		}
 	}
 }
