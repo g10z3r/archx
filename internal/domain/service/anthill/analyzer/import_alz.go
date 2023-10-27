@@ -28,14 +28,14 @@ func (a *ImportAnalyzer) Save(f *obj.FileObj, object Object) {
 
 	switch importObj.ImportType {
 	case obj.ImportTypeInternal:
-		f.Imports.InternalImportsMeta[getAlias(importObj)] = len(f.Imports.InternalImports)
-		f.Imports.InternalImports = append(f.Imports.InternalImports, importObj.Path[len(f.Metadata.Module):])
+		f.Entities.Imports.InternalImportsMeta[getAlias(importObj)] = len(f.Entities.Imports.InternalImports)
+		f.Entities.Imports.InternalImports = append(f.Entities.Imports.InternalImports, importObj.Path[len(f.Metadata.Module):])
 
 	case obj.ImportTypeExternal:
-		f.Imports.ExternalImports = append(f.Imports.ExternalImports, importObj.Path)
+		f.Entities.Imports.ExternalImports = append(f.Entities.Imports.ExternalImports, importObj.Path)
 
 	case obj.ImportTypeSideEffect:
-		f.Imports.SideEffectImports = append(f.Imports.SideEffectImports, importObj.Path)
+		f.Entities.Imports.SideEffectImports = append(f.Entities.Imports.SideEffectImports, importObj.Path)
 	}
 }
 

@@ -53,7 +53,7 @@ func (a *StructAnalyzer) Analyze(f *obj.FileObj, spec ast.Node) Object {
 	}
 
 	for _, pkg := range usedPackages {
-		if index, exists := f.Imports.InternalImportsMeta[pkg.Alias]; exists {
+		if index, exists := f.Entities.Imports.InternalImportsMeta[pkg.Alias]; exists {
 			structObj.AddDependency(index, pkg.Element)
 		}
 	}

@@ -44,14 +44,14 @@ func (a *FunctionAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {
 		}
 	}
 
-	params, deps, err := processFuncParams(f.FileSet, funcDecl, f.Imports.InternalImportsMeta)
+	params, deps, err := processFuncParams(f.FileSet, funcDecl, f.Entities.Imports.InternalImportsMeta)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	funcObj := obj.NewFuncObj(f.FileSet, funcDecl, params, deps, parentStruct)
 
-	if err := inspectFuncBody(funcDecl, funcObj, f.Imports.InternalImportsMeta); err != nil {
+	if err := inspectFuncBody(funcDecl, funcObj, f.Entities.Imports.InternalImportsMeta); err != nil {
 		log.Fatal(err)
 	}
 

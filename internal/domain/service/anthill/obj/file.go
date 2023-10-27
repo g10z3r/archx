@@ -12,6 +12,7 @@ type FileObjImports struct {
 }
 
 type FileobjEntities struct {
+	Imports   *FileObjImports
 	Structs   []*StructObj
 	Functions []*FuncObj
 }
@@ -26,12 +27,10 @@ type FileObjMatadata struct {
 
 // TODO
 // Add MethodIndexes, FuncIndexes, StructIndexes, ... FieldIndexes (?)
-// Move Imports to Entities
 
 type FileObj struct {
 	Name     string
 	FileSet  *token.FileSet
-	Imports  *FileObjImports
 	Entities *FileobjEntities
 	Metadata *FileObjMatadata
 	Stats    *FileObjStats
@@ -41,13 +40,13 @@ func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 	return &FileObj{
 		Name:    fileName,
 		FileSet: fset,
-		Imports: &FileObjImports{
-			InternalImports:     make([]string, 0),
-			ExternalImports:     make([]string, 0),
-			SideEffectImports:   make([]string, 0),
-			InternalImportsMeta: make(map[string]int),
-		},
 		Entities: &FileobjEntities{
+			Imports: &FileObjImports{
+				InternalImports:     make([]string, 0),
+				ExternalImports:     make([]string, 0),
+				SideEffectImports:   make([]string, 0),
+				InternalImportsMeta: make(map[string]int),
+			},
 			Structs:   make([]*StructObj, 0),
 			Functions: make([]*FuncObj, 0),
 		},
