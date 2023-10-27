@@ -12,10 +12,17 @@ type FileObjImports struct {
 }
 
 type FileobjEntities struct {
-	Imports   *FileObjImports
-	Structs   []*StructObj
-	Functions []*FuncObj
+	Imports       *FileObjImports
+	Structs       []*StructObj
+	StructIndexes map[string]int
+	Functions     []*FuncObj
 }
+
+func (obj *FileobjEntities) AppendStruct(o *StructObj) {
+	obj.StructIndexes[*o.Name] = len(obj.Structs)
+	obj.Structs = append(obj.Structs, o)
+}
+
 type FileObjStats struct {
 	Functions,
 	Structs, Interfaces int
@@ -47,8 +54,9 @@ func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 				SideEffectImports:   make([]string, 0),
 				InternalImportsMeta: make(map[string]int),
 			},
-			Structs:   make([]*StructObj, 0),
-			Functions: make([]*FuncObj, 0),
+			Structs:       make([]*StructObj, 0),
+			StructIndexes: make(map[string]int),
+			Functions:     make([]*FuncObj, 0),
 		},
 		Metadata: &FileObjMatadata{
 			Module: moduleName,
