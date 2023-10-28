@@ -33,7 +33,7 @@ func (a *StructAnalyzer) Save(f *obj.FileObj, object Object) {
 		log.Fatal("not a struct objects")
 	}
 
-	f.Entities.AppendStruct(structObj)
+	f.AppendStruct(structObj)
 }
 
 func (a *StructAnalyzer) Analyze(f *obj.FileObj, spec ast.Node) Object {
