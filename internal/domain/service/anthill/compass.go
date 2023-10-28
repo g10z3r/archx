@@ -8,16 +8,17 @@ import (
 	"path/filepath"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/collector"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/common"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
-	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
 type Manager struct {
-	analyzers map[string]analyzer.Analyzer
+	analyzers map[string]common.Analyzer
 }
 
-func (m *Manager) Register(a analyzer.Analyzer) {
+func (m *Manager) Register(a common.Analyzer) {
 	m.analyzers[a.Name()] = a
 }
 
@@ -35,7 +36,7 @@ type Compass struct {
 func NewCompass() *Compass {
 	return &Compass{
 		manager: &Manager{
-			analyzers: map[string]analyzer.Analyzer{},
+			analyzers: make(map[string]common.Analyzer),
 		},
 
 		eventCh:       make(chan compassEvent, 1),
@@ -70,7 +71,7 @@ func (c *Compass) Parse(info *collector.Info, targetDir string) {
 			fileObj := obj.NewFileObj(fset, info.ModuleName, filepath.Base(fileName))
 			pkgObj.AppendFile(fileObj)
 
-			vis := analyzer.NewVisitor(fileObj, c.manager.analyzers)
+			vis := NewVisitor(fileObj, c.manager.analyzers)
 			ast.Walk(vis, fileAst)
 		}
 

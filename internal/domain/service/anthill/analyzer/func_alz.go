@@ -5,7 +5,8 @@ import (
 	"go/token"
 	"log"
 
-	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/common"
 )
 
 type FunctionAnalyzer struct{}
@@ -19,7 +20,7 @@ func (a *FunctionAnalyzer) Check(node ast.Node) bool {
 	return ok
 }
 
-func (a *FunctionAnalyzer) Save(f *obj.FileObj, object Object) {
+func (a *FunctionAnalyzer) Save(f *obj.FileObj, object common.Object) {
 	funcObj, ok := object.(*obj.FuncObj)
 	if !ok {
 		log.Fatal("not a func objects")
@@ -28,7 +29,7 @@ func (a *FunctionAnalyzer) Save(f *obj.FileObj, object Object) {
 	f.AppendFunc(funcObj)
 }
 
-func (a *FunctionAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {
+func (a *FunctionAnalyzer) Analyze(f *obj.FileObj, node ast.Node) common.Object {
 	funcDecl, _ := node.(*ast.FuncDecl)
 
 	var parentStruct *ast.Ident

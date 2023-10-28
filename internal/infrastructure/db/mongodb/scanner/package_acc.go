@@ -1,16 +1,10 @@
 package scanner
 
 import (
-	"context"
-
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/g10z3r/archx/internal/domain/repository"
-
-	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
-	"github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/model"
 )
 
 type packageAccessor struct {
@@ -39,21 +33,21 @@ func (r *packageAccessor) StructAcc() repository.StructAccessor {
 	return r.structAcc
 }
 
-func (r *packageAccessor) Append(ctx context.Context, newPackage *obj.PackageObj, packageIndex int) error {
-	filter := bson.D{
-		{Key: "_id", Value: r.documentID},
-	}
+// func (r *packageAccessor) Append(ctx context.Context, newPackage *obj.PackageObj, packageIndex int) error {
+// 	filter := bson.D{
+// 		{Key: "_id", Value: r.documentID},
+// 	}
 
-	update := bson.D{
-		{Key: "$push", Value: bson.D{
-			{Key: "packages", Value: model.MapPackageEntity(newPackage)},
-		}},
+// 	update := bson.D{
+// 		{Key: "$push", Value: bson.D{
+// 			{Key: "packages", Value: model.MapPackageEntity(newPackage)},
+// 		}},
 
-		{Key: "$set", Value: bson.D{
-			{Key: "packagesIndex." + newPackage.Path, Value: packageIndex},
-		}},
-	}
+// 		{Key: "$set", Value: bson.D{
+// 			{Key: "packagesIndex." + newPackage.Path, Value: packageIndex},
+// 		}},
+// 	}
 
-	_, err := r.collection.UpdateOne(ctx, filter, update)
-	return err
-}
+// 	_, err := r.collection.UpdateOne(ctx, filter, update)
+// 	return err
+// }

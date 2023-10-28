@@ -1,17 +1,10 @@
 package scanner
 
 import (
-	"context"
-	"fmt"
-	"log"
 	"sync"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-
-	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
-	"github.com/g10z3r/archx/internal/infrastructure/db/mongodb/scanner/model"
 )
 
 type structAccessor struct {
@@ -29,32 +22,32 @@ func newStructAccessor(docID primitive.ObjectID, col *mongo.Collection) *structA
 	}
 }
 
-func (r *structAccessor) Append(ctx context.Context, structEntity *obj.StructObj, structIndex int, pkgPath string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+// func (r *structAccessor) Append(ctx context.Context, structEntity *obj.StructObj, structIndex int, pkgPath string) error {
+// 	r.mu.Lock()
+// 	defer r.mu.Unlock()
 
-	filter := bson.D{
-		{Key: "_id", Value: r.documentID},
-		{Key: "packages.path", Value: pkgPath},
-	}
+// 	filter := bson.D{
+// 		{Key: "_id", Value: r.documentID},
+// 		{Key: "packages.path", Value: pkgPath},
+// 	}
 
-	update := bson.D{
-		{
-			Key: "$push", Value: bson.D{
-				{Key: "packages.$.structs", Value: model.MapStructEntity(structEntity)},
-			},
-		},
-		{
-			Key: "$set", Value: bson.D{
-				{Key: fmt.Sprintf("packages.$.structsIndex.%s", *structEntity.Name), Value: structIndex},
-			},
-		},
-	}
+// 	update := bson.D{
+// 		{
+// 			Key: "$push", Value: bson.D{
+// 				{Key: "packages.$.structs", Value: model.MapStructEntity(structEntity)},
+// 			},
+// 		},
+// 		{
+// 			Key: "$set", Value: bson.D{
+// 				{Key: fmt.Sprintf("packages.$.structsIndex.%s", *structEntity.Name), Value: structIndex},
+// 			},
+// 		},
+// 	}
 
-	_, err := r.collection.UpdateOne(ctx, filter, update)
-	log.Printf("Saved %s to db", *structEntity.Name)
-	return err
-}
+// 	_, err := r.collection.UpdateOne(ctx, filter, update)
+// 	log.Printf("Saved %s to db", *structEntity.Name)
+// 	return err
+// }
 
 // func (r *structAccessor) AddMethod(ctx context.Context, methodEntity *entity.MethodEntity, structIndex int, pkgPath string) error {
 // 	r.mu.Lock()

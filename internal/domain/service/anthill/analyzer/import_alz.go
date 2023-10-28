@@ -6,7 +6,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/common"
 )
 
 type ImportAnalyzer struct{}
@@ -20,7 +21,7 @@ func (a *ImportAnalyzer) Check(node ast.Node) bool {
 	return ok
 }
 
-func (a *ImportAnalyzer) Save(f *obj.FileObj, object Object) {
+func (a *ImportAnalyzer) Save(f *obj.FileObj, object common.Object) {
 	importObj, ok := object.(*obj.ImportObj)
 	if !ok {
 		log.Fatal("not a import objects")
@@ -37,7 +38,7 @@ func getAlias(importObj *obj.ImportObj) string {
 	return path.Base(importObj.Path)
 }
 
-func (a *ImportAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {
+func (a *ImportAnalyzer) Analyze(f *obj.FileObj, node ast.Node) common.Object {
 	importSpec, _ := node.(*ast.ImportSpec)
 
 	if importSpec.Path == nil && importSpec.Path.Value == "" {

@@ -12,25 +12,6 @@ import (
 	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
 )
 
-var ignoredMap = map[string]struct{}{
-	".git":    {},
-	".docker": {},
-
-	".vscode":  {},
-	".idea":    {},
-	".eclipse": {},
-
-	"dist":    {},
-	"docker":  {},
-	"assets":  {},
-	"vendor":  {},
-	"build":   {},
-	"scripts": {},
-	"ci":      {},
-	"log":     {},
-	"logs":    {},
-}
-
 func main() {
 	// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	// defer cancel()
