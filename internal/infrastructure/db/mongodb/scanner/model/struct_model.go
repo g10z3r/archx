@@ -82,7 +82,7 @@ func mapFieldEntity(e *obj.FieldObj) *FieldDAO {
 // 	}
 // }
 
-func mapDependencyEntity(e *obj.DepObj) *DependencyDAO {
+func mapDependencyEntity(e *obj.EntityDepObj) *DependencyDAO {
 	return &DependencyDAO{
 		ImportIndex: e.ImportIndex,
 		Usage:       e.Usage,

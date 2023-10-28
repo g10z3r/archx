@@ -106,7 +106,7 @@ func inspectFuncBody(funcDecl *ast.FuncDecl, funcEntity *obj.FuncObj, impMeta ma
 }
 
 type FuncObjParamMap map[string]*obj.FuncObjParam
-type DepObjMap map[string]*obj.DepObj
+type DepObjMap map[string]*obj.EntityDepObj
 
 func processFuncParams(fset *token.FileSet, funcDecl *ast.FuncDecl, impMeta map[string]int) (FuncObjParamMap, DepObjMap, error) {
 	var params map[string]*obj.FuncObjParam
@@ -114,7 +114,7 @@ func processFuncParams(fset *token.FileSet, funcDecl *ast.FuncDecl, impMeta map[
 		params = make(map[string]*obj.FuncObjParam)
 	}
 
-	deps := map[string]*obj.DepObj{}
+	deps := map[string]*obj.EntityDepObj{}
 	for _, param := range funcDecl.Type.Params.List {
 		for _, name := range param.Names {
 			typ, err := obj.ExtractExprAsType(fset, param.Type)
@@ -131,7 +131,7 @@ func processFuncParams(fset *token.FileSet, funcDecl *ast.FuncDecl, impMeta map[
 			}
 
 			if index, exists := impMeta[typ.UsedPackages[0].Alias]; exists {
-				deps[typ.UsedPackages[0].Element] = &obj.DepObj{
+				deps[typ.UsedPackages[0].Element] = &obj.EntityDepObj{
 					ImportIndex: index,
 				}
 			}

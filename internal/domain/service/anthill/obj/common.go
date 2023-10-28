@@ -8,12 +8,17 @@ import (
 	"go/token"
 )
 
+type EntityDepObj struct {
+	ImportIndex int
+	Usage       int
+}
+
 type astExpr interface {
 	Pos() token.Pos
 	End() token.Pos
 }
 
-func calcLineCount(fset *token.FileSet, expr astExpr) int {
+func CalcEntityLOC(fset *token.FileSet, expr astExpr) int {
 	return fset.Position(expr.End()).Line - fset.Position(expr.Pos()).Line + 1
 }
 

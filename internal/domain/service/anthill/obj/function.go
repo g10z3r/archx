@@ -6,7 +6,7 @@ import (
 	"unicode"
 )
 
-type FuncObjMetadata struct {
+type FuncObjMeta struct {
 	LineCount      int
 	Arity          int
 	ReturnCount    int
@@ -20,22 +20,24 @@ type FuncObjParam struct {
 }
 
 type FuncObj struct {
+	Start        token.Pos
+	End          token.Pos
 	Name         string
 	Receiver     *string
 	Fields       map[string]int
 	Parameters   map[string]*FuncObjParam
-	Dependencies map[string]*DepObj
+	Dependencies map[string]*EntityDepObj
 	Visibility   bool
-	Metadata     *FuncObjMetadata
+	Metadata     *FuncObjMeta
 }
 
-func (s *FuncObj) Type() string {
+func (o *FuncObj) Type() string {
 	return "func"
 }
 
-func (f *FuncObj) AddDependency(importIndex int, element string) {
-	if _, exists := f.Dependencies[element]; !exists {
-		f.Dependencies[element] = &DepObj{
+func (o *FuncObj) AddDependency(importIndex int, element string) {
+	if _, exists := o.Dependencies[element]; !exists {
+		o.Dependencies[element] = &EntityDepObj{
 			ImportIndex: importIndex,
 			Usage:       1,
 		}
@@ -43,10 +45,10 @@ func (f *FuncObj) AddDependency(importIndex int, element string) {
 		return
 	}
 
-	f.Dependencies[element].Usage++
+	o.Dependencies[element].Usage++
 }
 
-func NewFuncObj(fset *token.FileSet, res *ast.FuncDecl, params map[string]*FuncObjParam, initDeps map[string]*DepObj, receiver *ast.Ident) *FuncObj {
+func NewFuncObj(fset *token.FileSet, res *ast.FuncDecl, params map[string]*FuncObjParam, initDeps map[string]*EntityDepObj, receiver *ast.Ident) *FuncObj {
 	var receiverName *string
 	var fields map[string]int
 
@@ -56,14 +58,16 @@ func NewFuncObj(fset *token.FileSet, res *ast.FuncDecl, params map[string]*FuncO
 	}
 
 	return &FuncObj{
+		Start:        res.Pos(),
+		End:          res.End(),
 		Name:         res.Name.Name,
 		Receiver:     receiverName,
 		Fields:       fields,
 		Dependencies: initDeps,
 		Parameters:   params,
 		Visibility:   unicode.IsUpper(rune(res.Name.Name[0])),
-		Metadata: &FuncObjMetadata{
-			LineCount: calcLineCount(fset, res),
+		Metadata: &FuncObjMeta{
+			LineCount: CalcEntityLOC(fset, res),
 			Arity:     len(params),
 		},
 	}

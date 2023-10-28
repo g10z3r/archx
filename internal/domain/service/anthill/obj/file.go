@@ -26,7 +26,7 @@ type FileObjStats struct {
 	Structs, Interfaces int
 }
 
-type FileObjMatadata struct {
+type FileObjMeta struct {
 	Module string
 }
 
@@ -36,46 +36,46 @@ type FileObj struct {
 	Name     string
 	FileSet  *token.FileSet
 	Entities *FileobjEntities
-	Metadata *FileObjMatadata
+	Metadata *FileObjMeta
 	Stats    *FileObjStats
 }
 
-func (obj *FileObj) AppendImport(o *ImportObj) {
-	obj.mutex.Lock()
-	switch o.ImportType {
+func (o *FileObj) AppendImport(obj *ImportObj) {
+	o.mutex.Lock()
+	switch obj.ImportType {
 	case ImportTypeInternal:
-		alias := o.Alias
-		if !o.WithAlias {
-			alias = path.Base(o.Path)
+		alias := obj.Alias
+		if !obj.WithAlias {
+			alias = path.Base(obj.Path)
 		}
 
-		obj.Entities.Imports.InternalImportsMeta[alias] = len(obj.Entities.Imports.InternalImports)
-		obj.Entities.Imports.InternalImports = append(obj.Entities.Imports.InternalImports, o.Path[len(obj.Metadata.Module):])
+		o.Entities.Imports.InternalImportsMeta[alias] = len(o.Entities.Imports.InternalImports)
+		o.Entities.Imports.InternalImports = append(o.Entities.Imports.InternalImports, obj.Path[len(o.Metadata.Module):])
 	case ImportTypeExternal:
-		obj.Entities.Imports.ExternalImports = append(obj.Entities.Imports.ExternalImports, o.Path)
+		o.Entities.Imports.ExternalImports = append(o.Entities.Imports.ExternalImports, obj.Path)
 	case ImportTypeSideEffect:
-		obj.Entities.Imports.SideEffectImports = append(obj.Entities.Imports.SideEffectImports, o.Path)
+		o.Entities.Imports.SideEffectImports = append(o.Entities.Imports.SideEffectImports, obj.Path)
 	}
-	obj.mutex.Unlock()
+	o.mutex.Unlock()
 }
 
-func (obj *FileObj) AppendStruct(o *StructObj) {
-	obj.mutex.Lock()
-	obj.Entities.StructIndexes[*o.Name] = len(obj.Entities.Structs)
-	obj.Entities.Structs = append(obj.Entities.Structs, o)
-	obj.mutex.Unlock()
+func (o *FileObj) AppendStruct(obj *StructObj) {
+	o.mutex.Lock()
+	o.Entities.StructIndexes[*obj.Name] = len(o.Entities.Structs)
+	o.Entities.Structs = append(o.Entities.Structs, obj)
+	o.mutex.Unlock()
 }
 
-func (obj *FileObj) AppendFunc(o *FuncObj) {
-	obj.mutex.Lock()
+func (o *FileObj) AppendFunc(obj *FuncObj) {
+	o.mutex.Lock()
 
-	if o.Receiver != nil {
-		o.Name = "$" + o.Name
+	if obj.Receiver != nil {
+		obj.Name = "$" + obj.Name
 	}
 
-	obj.Entities.FunctionIndexes[o.Name] = len(obj.Entities.Functions)
-	obj.Entities.Functions = append(obj.Entities.Functions, o)
-	obj.mutex.Unlock()
+	o.Entities.FunctionIndexes[obj.Name] = len(o.Entities.Functions)
+	o.Entities.Functions = append(o.Entities.Functions, obj)
+	o.mutex.Unlock()
 }
 
 func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
@@ -94,16 +94,8 @@ func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 			Functions:       make([]*FuncObj, 0),
 			FunctionIndexes: make(map[string]int),
 		},
-		Metadata: &FileObjMatadata{
+		Metadata: &FileObjMeta{
 			Module: moduleName,
 		},
 	}
-}
-
-func getAlias(importObj *ImportObj) string {
-	if importObj.WithAlias {
-		return importObj.Alias
-	}
-
-	return path.Base(importObj.Path)
 }

@@ -20,20 +20,20 @@ type ImportObj struct {
 	ImportType ImportType
 }
 
-func (e ImportObj) Type() string {
+func (o ImportObj) Type() string {
 	return "import"
 }
 
-func (e *ImportObj) CheckAndTrim(modName string) bool {
-	if len(e.Path) < len(modName) {
+func (o *ImportObj) CheckAndTrim(modName string) bool {
+	if len(o.Path) < len(modName) {
 		return false
 	}
 
-	if !strings.HasPrefix(e.Path, modName) {
+	if !strings.HasPrefix(o.Path, modName) {
 		return false
 	}
 
-	e.Path = e.Path[len(modName):]
+	o.Path = o.Path[len(modName):]
 	return true
 }
 

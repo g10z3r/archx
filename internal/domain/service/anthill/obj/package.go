@@ -29,9 +29,9 @@ func NewPackageObj(pkgAst *ast.Package, path string) *PackageObj {
 		FileIndexes: make(map[string]int, len(pkgAst.Files)),
 	}
 }
-func (obj *PackageObj) AppendFile(f *FileObj) {
-	obj.mutex.Lock()
-	obj.FileIndexes[f.Name] = len(obj.Files)
-	obj.Files = append(obj.Files, f)
-	obj.mutex.Unlock()
+func (o *PackageObj) AppendFile(obj *FileObj) {
+	o.mutex.Lock()
+	o.FileIndexes[obj.Name] = len(o.Files)
+	o.Files = append(o.Files, obj)
+	o.mutex.Unlock()
 }
