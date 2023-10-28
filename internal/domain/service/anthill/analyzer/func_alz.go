@@ -25,7 +25,7 @@ func (a *FunctionAnalyzer) Save(f *obj.FileObj, object Object) {
 		log.Fatal("not a func objects")
 	}
 
-	f.Entities.Functions = append(f.Entities.Functions, funcObj)
+	f.AppendFunc(funcObj)
 }
 
 func (a *FunctionAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {

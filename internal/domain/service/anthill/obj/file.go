@@ -30,11 +30,8 @@ type FileObjMatadata struct {
 	Module string
 }
 
-// TODO
-// Add MethodIndexes, ... FieldIndexes (?)
-
 type FileObj struct {
-	mutex sync.RWMutex
+	mutex sync.Mutex
 
 	Name     string
 	FileSet  *token.FileSet
@@ -47,7 +44,12 @@ func (obj *FileObj) AppendImport(o *ImportObj) {
 	obj.mutex.Lock()
 	switch o.ImportType {
 	case ImportTypeInternal:
-		obj.Entities.Imports.InternalImportsMeta[getAlias(o)] = len(obj.Entities.Imports.InternalImports)
+		alias := o.Alias
+		if !o.WithAlias {
+			alias = path.Base(o.Path)
+		}
+
+		obj.Entities.Imports.InternalImportsMeta[alias] = len(obj.Entities.Imports.InternalImports)
 		obj.Entities.Imports.InternalImports = append(obj.Entities.Imports.InternalImports, o.Path[len(obj.Metadata.Module):])
 	case ImportTypeExternal:
 		obj.Entities.Imports.ExternalImports = append(obj.Entities.Imports.ExternalImports, o.Path)
@@ -66,6 +68,11 @@ func (obj *FileObj) AppendStruct(o *StructObj) {
 
 func (obj *FileObj) AppendFunc(o *FuncObj) {
 	obj.mutex.Lock()
+
+	if o.Receiver != nil {
+		o.Name = "$" + o.Name
+	}
+
 	obj.Entities.FunctionIndexes[o.Name] = len(obj.Entities.Functions)
 	obj.Entities.Functions = append(obj.Entities.Functions, o)
 	obj.mutex.Unlock()
@@ -82,9 +89,10 @@ func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 				SideEffectImports:   make([]string, 0),
 				InternalImportsMeta: make(map[string]int),
 			},
-			Structs:       make([]*StructObj, 0),
-			StructIndexes: make(map[string]int),
-			Functions:     make([]*FuncObj, 0),
+			Structs:         make([]*StructObj, 0),
+			StructIndexes:   make(map[string]int),
+			Functions:       make([]*FuncObj, 0),
+			FunctionIndexes: make(map[string]int),
 		},
 		Metadata: &FileObjMatadata{
 			Module: moduleName,

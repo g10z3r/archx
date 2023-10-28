@@ -6,7 +6,7 @@ import (
 )
 
 type PackageObj struct {
-	lock sync.Mutex
+	mutex sync.Mutex
 
 	// Name holds the name of the package.
 	Name string
@@ -30,8 +30,8 @@ func NewPackageObj(pkgAst *ast.Package, path string) *PackageObj {
 	}
 }
 func (obj *PackageObj) AppendFile(f *FileObj) {
-	obj.lock.Lock()
+	obj.mutex.Lock()
 	obj.FileIndexes[f.Name] = len(obj.Files)
 	obj.Files = append(obj.Files, f)
-	obj.lock.Unlock()
+	obj.mutex.Unlock()
 }
