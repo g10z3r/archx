@@ -26,17 +26,7 @@ func (a *ImportAnalyzer) Save(f *obj.FileObj, object Object) {
 		log.Fatal("not a import objects")
 	}
 
-	switch importObj.ImportType {
-	case obj.ImportTypeInternal:
-		f.Entities.Imports.InternalImportsMeta[getAlias(importObj)] = len(f.Entities.Imports.InternalImports)
-		f.Entities.Imports.InternalImports = append(f.Entities.Imports.InternalImports, importObj.Path[len(f.Metadata.Module):])
-
-	case obj.ImportTypeExternal:
-		f.Entities.Imports.ExternalImports = append(f.Entities.Imports.ExternalImports, importObj.Path)
-
-	case obj.ImportTypeSideEffect:
-		f.Entities.Imports.SideEffectImports = append(f.Entities.Imports.SideEffectImports, importObj.Path)
-	}
+	f.AppendImport(importObj)
 }
 
 func getAlias(importObj *obj.ImportObj) string {

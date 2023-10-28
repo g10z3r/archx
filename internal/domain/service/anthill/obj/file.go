@@ -2,6 +2,8 @@ package obj
 
 import (
 	"go/token"
+	"path"
+	"sync"
 )
 
 type FileObjImports struct {
@@ -12,15 +14,11 @@ type FileObjImports struct {
 }
 
 type FileobjEntities struct {
-	Imports       *FileObjImports
-	Structs       []*StructObj
-	StructIndexes map[string]int
-	Functions     []*FuncObj
-}
-
-func (obj *FileobjEntities) AppendStruct(o *StructObj) {
-	obj.StructIndexes[*o.Name] = len(obj.Structs)
-	obj.Structs = append(obj.Structs, o)
+	Imports         *FileObjImports
+	Structs         []*StructObj
+	StructIndexes   map[string]int
+	Functions       []*FuncObj
+	FunctionIndexes map[string]int
 }
 
 type FileObjStats struct {
@@ -33,14 +31,44 @@ type FileObjMatadata struct {
 }
 
 // TODO
-// Add MethodIndexes, FuncIndexes, StructIndexes, ... FieldIndexes (?)
+// Add MethodIndexes, ... FieldIndexes (?)
 
 type FileObj struct {
+	mutex sync.RWMutex
+
 	Name     string
 	FileSet  *token.FileSet
 	Entities *FileobjEntities
 	Metadata *FileObjMatadata
 	Stats    *FileObjStats
+}
+
+func (obj *FileObj) AppendImport(o *ImportObj) {
+	obj.mutex.Lock()
+	switch o.ImportType {
+	case ImportTypeInternal:
+		obj.Entities.Imports.InternalImportsMeta[getAlias(o)] = len(obj.Entities.Imports.InternalImports)
+		obj.Entities.Imports.InternalImports = append(obj.Entities.Imports.InternalImports, o.Path[len(obj.Metadata.Module):])
+	case ImportTypeExternal:
+		obj.Entities.Imports.ExternalImports = append(obj.Entities.Imports.ExternalImports, o.Path)
+	case ImportTypeSideEffect:
+		obj.Entities.Imports.SideEffectImports = append(obj.Entities.Imports.SideEffectImports, o.Path)
+	}
+	obj.mutex.Unlock()
+}
+
+func (obj *FileObj) AppendStruct(o *StructObj) {
+	obj.mutex.Lock()
+	obj.Entities.StructIndexes[*o.Name] = len(obj.Entities.Structs)
+	obj.Entities.Structs = append(obj.Entities.Structs, o)
+	obj.mutex.Unlock()
+}
+
+func (obj *FileObj) AppendFunc(o *FuncObj) {
+	obj.mutex.Lock()
+	obj.Entities.FunctionIndexes[o.Name] = len(obj.Entities.Functions)
+	obj.Entities.Functions = append(obj.Entities.Functions, o)
+	obj.mutex.Unlock()
 }
 
 func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
@@ -62,4 +90,12 @@ func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 			Module: moduleName,
 		},
 	}
+}
+
+func getAlias(importObj *ImportObj) string {
+	if importObj.WithAlias {
+		return importObj.Alias
+	}
+
+	return path.Base(importObj.Path)
 }
