@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"log"
 	"path/filepath"
+	"sync"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
@@ -27,6 +28,8 @@ type compassEvent interface {
 }
 
 type Compass struct {
+	mutex sync.Mutex
+
 	manager *Manager
 
 	eventCh       chan compassEvent
@@ -64,19 +67,43 @@ func (c *Compass) Parse(info *collector.Info, targetDir string) {
 		log.Fatal(err)
 	}
 
+	var wg sync.WaitGroup
 	for _, pkgAst := range pkg {
-		pkgObj := obj.NewPackageObj(pkgAst, targetDir)
+		wg.Add(1)
+		go func(pkgAst *ast.Package) {
+			c.eventCh <- &event.PackageFormedEvent{
+				Package: c.ParsePkg(fset, pkgAst, targetDir, info.ModuleName),
+			}
 
-		for fileName, fileAst := range pkgAst.Files {
-			fileObj := obj.NewFileObj(fset, info.ModuleName, filepath.Base(fileName))
+			wg.Done()
+		}(pkgAst)
+	}
+
+	wg.Wait()
+}
+
+func (c *Compass) ParsePkg(fset *token.FileSet, pkgAst *ast.Package, targetDir, moduleName string) *obj.PackageObj {
+	pkgObj := obj.NewPackageObj(pkgAst, targetDir)
+
+	var wg sync.WaitGroup
+	for fileName, fileAst := range pkgAst.Files {
+		wg.Add(1)
+		go func(fileAst *ast.File, fileName string) {
+			fileObj := c.ParseFile(fset, fileAst, moduleName, fileName)
 			pkgObj.AppendFile(fileObj)
 
-			vis := NewVisitor(fileObj, c.manager.analyzers)
-			ast.Walk(vis, fileAst)
-		}
-
-		c.eventCh <- &event.PackageFormedEvent{
-			Package: pkgObj,
-		}
+			wg.Done()
+		}(fileAst, fileName)
 	}
+
+	wg.Wait()
+	return pkgObj
+}
+
+func (c *Compass) ParseFile(fset *token.FileSet, fileAst *ast.File, moduleName, fileName string) *obj.FileObj {
+	fileObj := obj.NewFileObj(fset, moduleName, filepath.Base(fileName))
+	visitor := NewVisitor(fileObj, c.manager.analyzers)
+	ast.Walk(visitor, fileAst)
+
+	return fileObj
 }
