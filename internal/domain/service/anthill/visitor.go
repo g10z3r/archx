@@ -10,10 +10,10 @@ import (
 
 type Visitor struct {
 	fileObj     *obj.FileObj
-	analyzerMap map[string]common.Analyzer
+	analyzerMap common.AnalyzerMap
 }
 
-func NewVisitor(f *obj.FileObj, analyzers map[string]common.Analyzer) *Visitor {
+func NewVisitor(f *obj.FileObj, analyzers common.AnalyzerMap) *Visitor {
 	return &Visitor{
 		analyzerMap: analyzers,
 		fileObj:     f,

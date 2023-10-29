@@ -16,3 +16,5 @@ type Analyzer interface {
 	Analyze(f *obj.FileObj, node ast.Node) Object
 	Save(f *obj.FileObj, obj Object)
 }
+
+type AnalyzerMap map[string]Analyzer

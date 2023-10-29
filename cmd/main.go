@@ -35,7 +35,7 @@ func main() {
 	// scanRepo := mongoScannerRepo.NewSnapshotRepository(collection)
 	// scanService.Perform(ctx, "example/cmd", "github.com/g10z3r/archx")
 
-	compass := anthill.NewCompass()
+	compass := anthill.DefaultCompass()
 	clct := collector.DefaultCollector(
 		collector.WithTargetDir("example/cmd"),
 	)
@@ -71,7 +71,10 @@ func main() {
 	}()
 
 	for _, p := range clct.GetAllPackageDirs() {
-		compass.Parse(clct.GetInfo(), p)
+		err := compass.ParseDir(clct.GetInfo(), p)
+		if err != nil {
+
+		}
 		time.Sleep(time.Second)
 		close(unsubscribeCh)
 	}

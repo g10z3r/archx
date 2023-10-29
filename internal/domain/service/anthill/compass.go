@@ -1,6 +1,8 @@
 package anthill
 
 import (
+	"context"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -8,11 +10,12 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/collector"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/common"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/config"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/pipe"
 )
 
 type Manager struct {
@@ -28,9 +31,9 @@ type compassEvent interface {
 }
 
 type Compass struct {
-	mutex sync.Mutex
-
-	manager *Manager
+	mutex    sync.Mutex
+	pipeline *pipe.Pipeline
+	config   *config.Config
 
 	eventCh       chan compassEvent
 	unsubscribeCh chan struct{}
@@ -38,8 +41,8 @@ type Compass struct {
 
 func NewCompass() *Compass {
 	return &Compass{
-		manager: &Manager{
-			analyzers: make(map[string]common.Analyzer),
+		config: &config.Config{
+			Analysis: make(common.AnalyzerMap),
 		},
 
 		eventCh:       make(chan compassEvent, 1),
@@ -47,20 +50,28 @@ func NewCompass() *Compass {
 	}
 }
 
+func (c *Compass) RegisterAnalyzer(alz common.Analyzer) error {
+	if _, ok := c.config.Analysis[alz.Name()]; ok {
+		return fmt.Errorf("analyzer %s already exists", alz.Name())
+	}
+
+	c.config.Analysis[alz.Name()] = alz
+	return nil
+}
+
+func (c *Compass) DeleteAnalyzer(name string) {
+	delete(c.config.Analysis, name)
+}
+
 func (r *Compass) Subscribe() (<-chan compassEvent, chan struct{}) {
 	return r.eventCh, r.unsubscribeCh
 }
 
-func (c *Compass) Parse(info *collector.Info, targetDir string) {
-	importAlz := &analyzer.ImportAnalyzer{}
-	c.manager.Register(importAlz)
+func (c *Compass) Run(ctx context.Context) {
+	c.pipeline.Run(ctx, c)
+}
 
-	structAlz := &analyzer.StructAnalyzer{}
-	c.manager.Register(structAlz)
-
-	funcAlz := &analyzer.FunctionAnalyzer{}
-	c.manager.Register(funcAlz)
-
+func (c *Compass) ParseDir(info *collector.Info, targetDir string) error {
 	fset := token.NewFileSet()
 	pkg, err := parser.ParseDir(fset, targetDir, nil, parser.AllErrors)
 	if err != nil {
@@ -72,7 +83,7 @@ func (c *Compass) Parse(info *collector.Info, targetDir string) {
 		wg.Add(1)
 		go func(pkgAst *ast.Package) {
 			c.eventCh <- &event.PackageFormedEvent{
-				Package: c.ParsePkg(fset, pkgAst, targetDir, info.ModuleName),
+				Package: c.parsePkg(fset, pkgAst, targetDir, info.ModuleName),
 			}
 
 			wg.Done()
@@ -80,16 +91,17 @@ func (c *Compass) Parse(info *collector.Info, targetDir string) {
 	}
 
 	wg.Wait()
+	return nil
 }
 
-func (c *Compass) ParsePkg(fset *token.FileSet, pkgAst *ast.Package, targetDir, moduleName string) *obj.PackageObj {
+func (c *Compass) parsePkg(fset *token.FileSet, pkgAst *ast.Package, targetDir, moduleName string) *obj.PackageObj {
 	pkgObj := obj.NewPackageObj(pkgAst, targetDir)
 
 	var wg sync.WaitGroup
 	for fileName, fileAst := range pkgAst.Files {
 		wg.Add(1)
 		go func(fileAst *ast.File, fileName string) {
-			fileObj := c.ParseFile(fset, fileAst, moduleName, fileName)
+			fileObj := c.parseFile(fset, fileAst, moduleName, fileName)
 			pkgObj.AppendFile(fileObj)
 
 			wg.Done()
@@ -100,9 +112,9 @@ func (c *Compass) ParsePkg(fset *token.FileSet, pkgAst *ast.Package, targetDir, 
 	return pkgObj
 }
 
-func (c *Compass) ParseFile(fset *token.FileSet, fileAst *ast.File, moduleName, fileName string) *obj.FileObj {
+func (c *Compass) parseFile(fset *token.FileSet, fileAst *ast.File, moduleName, fileName string) *obj.FileObj {
 	fileObj := obj.NewFileObj(fset, moduleName, filepath.Base(fileName))
-	visitor := NewVisitor(fileObj, c.manager.analyzers)
+	visitor := NewVisitor(fileObj, c.config.Analysis)
 	ast.Walk(visitor, fileAst)
 
 	return fileObj
