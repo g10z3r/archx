@@ -29,13 +29,14 @@ type Compass struct {
 }
 
 func NewCompass() *Compass {
+	eventCh := make(chan event.Event, 1)
 	return &Compass{
+		pipeline:      pipe.NewPipeline(eventCh),
+		eventCh:       eventCh,
+		unsubscribeCh: make(chan struct{}),
 		config: &config.Config{
 			Analysis: make(analyzer.AnalyzerMap),
 		},
-
-		eventCh:       make(chan event.Event, 1),
-		unsubscribeCh: make(chan struct{}),
 	}
 }
 

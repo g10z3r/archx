@@ -9,11 +9,26 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
 	"golang.org/x/mod/modfile"
 )
 
-const goModFileName = "go.mod"
-const goFileExt = ".go"
+type CollectorScanMode int
+
+const (
+	// Full Scan Mode: Activated when the configuration file is absent.
+	// Unlike standard scanning, this mode not only searches for directories but also locates the `go.mod`
+	// file to extract the module value. This ensures a comprehensive discovery of resources and settings.
+	ModeScanFull CollectorScanMode = iota
+	// Scan Dirs Mode: Unlike the Full Scan Mode, this mode limits its search to directories containing *.go files,
+	// identifying them as Go packages. This is more targeted and omits directories that are not relevant to Go development.
+	ModeScanDirs
+)
+
+const (
+	goModFileName = "go.mod"
+	goFileExt     = ".go"
+)
 
 type CollectorPluginInput struct {
 	IgnoredList map[string]struct{}
@@ -29,10 +44,16 @@ type CollectorPluginOutput struct {
 }
 
 type CollectorPlugin struct {
-	next   Plugin
-	name   string
+	name    string
+	next    Plugin
+	eventCh chan event.Event
+
 	input  *CollectorPluginInput
 	output *CollectorPluginOutput
+}
+
+func (p *CollectorPlugin) Name() string {
+	return p.name
 }
 
 func (p *CollectorPlugin) IsTerminal() bool {
@@ -51,6 +72,7 @@ func (p *CollectorPlugin) Execute(ctx context.Context, input interface{}) interf
 	p.input = input.(*CollectorPluginInput)
 
 	if err := p.explore(p.input.RootDir, true); err != nil {
+		// p.eventCh <-
 		log.Fatal(err)
 	}
 

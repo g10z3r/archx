@@ -1,8 +1,17 @@
 package plugin
 
+import "github.com/g10z3r/archx/internal/domain/service/anthill/event"
+
 type JoinerPlugin struct {
-	next      Plugin
+	name    string
+	next    Plugin
+	eventCh chan event.Event
+
 	mergeFunc func(chan interface{}) interface{}
+}
+
+func (p *JoinerPlugin) Name() string {
+	return p.name
 }
 
 func (j *JoinerPlugin) IsTerminal() bool {

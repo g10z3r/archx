@@ -3,11 +3,20 @@ package plugin
 import (
 	"context"
 	"sync"
+
+	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
 )
 
 type SplitterPlugin struct {
-	next     Plugin
+	name    string
+	next    Plugin
+	eventCh chan event.Event
+
 	branches []Plugin
+}
+
+func (p *SplitterPlugin) Name() string {
+	return p.name
 }
 
 func (s *SplitterPlugin) IsTerminal() bool {

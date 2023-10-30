@@ -3,12 +3,14 @@ package pipe
 import (
 	"context"
 
+	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/pipe/plugin"
 )
 
 type Pipeline struct {
-	head plugin.Plugin
-	tail plugin.Plugin
+	head    plugin.Plugin
+	tail    plugin.Plugin
+	eventCh chan event.Event
 }
 
 func (p *Pipeline) Add(plugin plugin.Plugin) {
@@ -38,6 +40,12 @@ func (p *Pipeline) Run(ctx context.Context, input interface{}) interface{} {
 	}
 
 	return output
+}
+
+func NewPipeline(eventCh chan event.Event) *Pipeline {
+	return &Pipeline{
+		eventCh: eventCh,
+	}
 }
 
 // func main() {
