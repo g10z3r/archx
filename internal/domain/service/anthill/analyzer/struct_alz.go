@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
-	"github.com/g10z3r/archx/internal/domain/service/anthill/common"
 )
 
 type StructAnalyzer struct{}
@@ -28,7 +27,7 @@ func (a *StructAnalyzer) Check(node ast.Node) bool {
 	return true
 }
 
-func (a *StructAnalyzer) Save(f *obj.FileObj, object common.Object) {
+func (a *StructAnalyzer) Save(f *obj.FileObj, object Object) {
 	structObj, ok := object.(*obj.StructObj)
 	if !ok {
 		log.Fatal("not a struct objects")
@@ -37,7 +36,7 @@ func (a *StructAnalyzer) Save(f *obj.FileObj, object common.Object) {
 	f.AppendStruct(structObj)
 }
 
-func (a *StructAnalyzer) Analyze(f *obj.FileObj, spec ast.Node) common.Object {
+func (a *StructAnalyzer) Analyze(f *obj.FileObj, spec ast.Node) Object {
 	typeSpec, ok := spec.(*ast.TypeSpec)
 	if !ok {
 		return nil

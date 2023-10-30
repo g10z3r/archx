@@ -3,24 +3,22 @@ package plugin
 import (
 	"context"
 	"sync"
-
-	"github.com/g10z3r/archx/internal/domain/service/anthill/common"
 )
 
 type SplitterPlugin struct {
-	next     common.Plugin
-	branches []common.Plugin
+	next     Plugin
+	branches []Plugin
 }
 
 func (s *SplitterPlugin) IsTerminal() bool {
 	return false
 }
 
-func (e *SplitterPlugin) Next() common.Plugin {
+func (e *SplitterPlugin) Next() Plugin {
 	return e.next
 }
 
-func (s *SplitterPlugin) SetNext(p common.Plugin) {
+func (s *SplitterPlugin) SetNext(p Plugin) {
 	s.next = p
 }
 
@@ -30,7 +28,7 @@ func (s *SplitterPlugin) Execute(ctx context.Context, input interface{}) interfa
 
 	for _, plugin := range s.branches {
 		wg.Add(1)
-		go func(plugin common.Plugin, input interface{}) {
+		go func(plugin Plugin, input interface{}) {
 			defer wg.Done()
 			dataChannel <- plugin.Execute(ctx, input)
 		}(plugin, input)

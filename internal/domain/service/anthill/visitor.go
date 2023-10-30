@@ -4,16 +4,16 @@ import (
 	"go/ast"
 	"log"
 
+	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
-	"github.com/g10z3r/archx/internal/domain/service/anthill/common"
 )
 
 type Visitor struct {
 	fileObj     *obj.FileObj
-	analyzerMap common.AnalyzerMap
+	analyzerMap analyzer.AnalyzerMap
 }
 
-func NewVisitor(f *obj.FileObj, analyzers common.AnalyzerMap) *Visitor {
+func NewVisitor(f *obj.FileObj, analyzers analyzer.AnalyzerMap) *Visitor {
 	return &Visitor{
 		analyzerMap: analyzers,
 		fileObj:     f,

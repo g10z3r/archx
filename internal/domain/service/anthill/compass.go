@@ -10,47 +10,36 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/collector"
-	"github.com/g10z3r/archx/internal/domain/service/anthill/common"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/config"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/pipe"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/pipe/plugin"
 )
-
-type Manager struct {
-	analyzers map[string]common.Analyzer
-}
-
-func (m *Manager) Register(a common.Analyzer) {
-	m.analyzers[a.Name()] = a
-}
-
-type compassEvent interface {
-	Name() string
-}
 
 type Compass struct {
 	mutex    sync.Mutex
 	pipeline *pipe.Pipeline
 	config   *config.Config
 
-	eventCh       chan compassEvent
+	eventCh       chan event.Event
 	unsubscribeCh chan struct{}
 }
 
 func NewCompass() *Compass {
 	return &Compass{
 		config: &config.Config{
-			Analysis: make(common.AnalyzerMap),
+			Analysis: make(analyzer.AnalyzerMap),
 		},
 
-		eventCh:       make(chan compassEvent, 1),
+		eventCh:       make(chan event.Event, 1),
 		unsubscribeCh: make(chan struct{}),
 	}
 }
 
-func (c *Compass) RegisterAnalyzer(alz common.Analyzer) error {
+func (c *Compass) RegisterAnalyzer(alz analyzer.Analyzer) error {
 	if _, ok := c.config.Analysis[alz.Name()]; ok {
 		return fmt.Errorf("analyzer %s already exists", alz.Name())
 	}
@@ -63,12 +52,19 @@ func (c *Compass) DeleteAnalyzer(name string) {
 	delete(c.config.Analysis, name)
 }
 
-func (r *Compass) Subscribe() (<-chan compassEvent, chan struct{}) {
+func (r *Compass) Subscribe() (<-chan event.Event, chan struct{}) {
 	return r.eventCh, r.unsubscribeCh
 }
 
 func (c *Compass) Run(ctx context.Context) {
-	c.pipeline.Run(ctx, c)
+	res := c.pipeline.Run(ctx, &plugin.CollectorPluginInput{
+		RootDir:     ".",
+		IgnoredList: config.DefaultIgnoredMap,
+	})
+
+	for _, dir := range res.([]string) {
+		fmt.Println(dir)
+	}
 }
 
 func (c *Compass) ParseDir(info *collector.Info, targetDir string) error {

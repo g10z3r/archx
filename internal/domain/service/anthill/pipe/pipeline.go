@@ -3,15 +3,15 @@ package pipe
 import (
 	"context"
 
-	"github.com/g10z3r/archx/internal/domain/service/anthill/common"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/pipe/plugin"
 )
 
 type Pipeline struct {
-	head common.Plugin
-	tail common.Plugin
+	head plugin.Plugin
+	tail plugin.Plugin
 }
 
-func (p *Pipeline) Add(plugin common.Plugin) {
+func (p *Pipeline) Add(plugin plugin.Plugin) {
 	if p.head == nil {
 		p.head = plugin
 		p.tail = plugin

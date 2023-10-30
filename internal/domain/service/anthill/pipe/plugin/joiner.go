@@ -1,9 +1,7 @@
 package plugin
 
-import "github.com/g10z3r/archx/internal/domain/service/anthill/common"
-
 type JoinerPlugin struct {
-	next      common.Plugin
+	next      Plugin
 	mergeFunc func(chan interface{}) interface{}
 }
 
@@ -11,11 +9,11 @@ func (j *JoinerPlugin) IsTerminal() bool {
 	return j.next != nil
 }
 
-func (e *JoinerPlugin) Next() common.Plugin {
+func (e *JoinerPlugin) Next() Plugin {
 	return e.next
 }
 
-func (s *JoinerPlugin) SetNext(p common.Plugin) {
+func (s *JoinerPlugin) SetNext(p Plugin) {
 	s.next = p
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -36,6 +37,7 @@ func main() {
 	// scanService.Perform(ctx, "example/cmd", "github.com/g10z3r/archx")
 
 	compass := anthill.DefaultCompass()
+	compass.Run(context.Background())
 	clct := collector.DefaultCollector(
 		collector.WithTargetDir("example/cmd"),
 	)

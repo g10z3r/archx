@@ -7,5 +7,5 @@ type PackageFormedEvent struct {
 }
 
 func (d *PackageFormedEvent) Name() string {
-	return "pkgFormedEvent"
+	return "PackageFormed"
 }

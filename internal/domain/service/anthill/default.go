@@ -2,21 +2,27 @@ package anthill
 
 import (
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
-	"github.com/g10z3r/archx/internal/domain/service/anthill/common"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/config"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/pipe"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/pipe/plugin"
 )
 
 type CompassOption func(*Compass)
 
 func DefaultCompass(options ...CompassOption) *Compass {
+	pipeline := &pipe.Pipeline{}
+	pipeline.Add(&plugin.CollectorPlugin{})
+
 	compass := &Compass{
+		pipeline: pipeline,
 		config: &config.Config{
 			RootDir:   ".",
 			TargetDir: "",
-			Analysis:  make(common.AnalyzerMap),
+			Analysis:  make(analyzer.AnalyzerMap),
 		},
 
-		eventCh:       make(chan compassEvent, 1),
+		eventCh:       make(chan event.Event, 1),
 		unsubscribeCh: make(chan struct{}),
 	}
 
