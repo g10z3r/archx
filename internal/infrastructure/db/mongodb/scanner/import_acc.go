@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
 type importAccessor struct {

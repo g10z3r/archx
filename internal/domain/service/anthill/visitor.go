@@ -5,16 +5,16 @@ import (
 	"log"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
-	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
 type Visitor struct {
 	fileObj      *obj.FileObj
 	analyzerMap  analyzer.AnalyzerMap
-	analyzer2Map map[string]analyzer.Analyzer2[ast.Node, analyzer.Object]
+	analyzer2Map map[string]analyzer.Analyzer[ast.Node, analyzer.Object]
 }
 
-func NewVisitor(f *obj.FileObj, analyzerMap analyzer.AnalyzerMap, analyzers2 map[string]analyzer.Analyzer2[ast.Node, analyzer.Object]) *Visitor {
+func NewVisitor(f *obj.FileObj, analyzerMap analyzer.AnalyzerMap, analyzers2 map[string]analyzer.Analyzer[ast.Node, analyzer.Object]) *Visitor {
 	return &Visitor{
 		analyzerMap:  analyzerMap,
 		analyzer2Map: analyzers2,

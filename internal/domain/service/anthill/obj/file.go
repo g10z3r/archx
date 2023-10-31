@@ -6,15 +6,15 @@ import (
 	"sync"
 )
 
-type FileObjImports struct {
+type FileObjImportSet struct {
 	InternalImports     []string
 	ExternalImports     []string
 	SideEffectImports   []string
 	InternalImportsMeta map[string]int
 }
 
-type FileObjEntities struct {
-	Imports         *FileObjImports
+type FileObjEntitySet struct {
+	Imports         *FileObjImportSet
 	Structs         []*StructObj
 	StructIndexes   map[string]int
 	Functions       []*FuncObj
@@ -35,7 +35,7 @@ type FileObj struct {
 
 	Name     string
 	FileSet  *token.FileSet
-	Entities *FileObjEntities
+	Entities *FileObjEntitySet
 	Metadata *FileObjMeta
 	Stats    *FileObjStats
 }
@@ -82,8 +82,8 @@ func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 	return &FileObj{
 		Name:    fileName,
 		FileSet: fset,
-		Entities: &FileObjEntities{
-			Imports: &FileObjImports{
+		Entities: &FileObjEntitySet{
+			Imports: &FileObjImportSet{
 				InternalImports:     make([]string, 0),
 				ExternalImports:     make([]string, 0),
 				SideEffectImports:   make([]string, 0),

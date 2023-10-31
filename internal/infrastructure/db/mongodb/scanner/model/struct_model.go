@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
 type FieldDAO struct {

@@ -4,7 +4,7 @@ import (
 	"go/ast"
 	"log"
 
-	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
 type StructAnalyzer struct{}

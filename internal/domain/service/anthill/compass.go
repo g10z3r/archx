@@ -11,10 +11,10 @@ import (
 	"sync"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
-	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer/obj"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/collector"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/config"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
+	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/pipe"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/pipe/plugin"
 )
@@ -40,7 +40,7 @@ func NewCompass() *Compass {
 	}
 }
 
-func (c *Compass) RegisterAnalyzer(alz analyzer.Analyzer) error {
+func (c *Compass) RegisterAnalyzer(alz analyzer.AnalyzerOld) error {
 	if _, ok := c.config.Analysis[alz.Name()]; ok {
 		return fmt.Errorf("analyzer %s already exists", alz.Name())
 	}
@@ -112,8 +112,9 @@ func (c *Compass) parsePkg(fset *token.FileSet, pkgAst *ast.Package, targetDir, 
 func (c *Compass) parseFile(fset *token.FileSet, fileAst *ast.File, moduleName, fileName string) *obj.FileObj {
 	fileObj := obj.NewFileObj(fset, moduleName, filepath.Base(fileName))
 
-	visitor := NewVisitor(fileObj, c.config.Analysis, map[string]analyzer.Analyzer2[ast.Node, analyzer.Object]{
+	visitor := NewVisitor(fileObj, c.config.Analysis, map[string]analyzer.Analyzer[ast.Node, analyzer.Object]{
 		"import": analyzer.NewAnalyzer(
+			fileObj,
 			analyzer.ImportAnalyze,
 			analyzer.ImportCheck,
 		),
