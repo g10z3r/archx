@@ -1,11 +1,59 @@
 package analyzer
 
 import (
+	"context"
 	"go/ast"
 	"log"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
+
+func NewStructAnalyzer(file *obj.FileObj) Analyzer[ast.Node, Object] {
+	return NewAnalyzer[ast.Node, Object](
+		file,
+		analyzeStructNode,
+		checkStructNode,
+	)
+}
+
+func checkStructNode(node ast.Node) bool {
+	typeSpec, ok := node.(*ast.TypeSpec)
+	if !ok {
+		return false
+	}
+
+	_, ok = typeSpec.Type.(*ast.StructType)
+	if !ok {
+		return false
+	}
+
+	return true
+}
+
+func analyzeStructNode(ctx context.Context, f *obj.FileObj, spec ast.Node) (Object, error) {
+	typeSpec, ok := spec.(*ast.TypeSpec)
+	if !ok {
+		return nil, nil // TODO: add error return message
+	}
+
+	t, ok := typeSpec.Type.(*ast.StructType)
+	if !ok {
+		return nil, nil // TODO: add error return message
+	}
+
+	structObj, usedPackages, err := obj.NewStructObj(f.FileSet, t, obj.NotEmbedded, &typeSpec.Name.Name)
+	if err != nil {
+		return nil, nil // TODO: add error return message
+	}
+
+	for _, pkg := range usedPackages {
+		if index, exists := f.Entities.Imports.InternalImportsMeta[pkg.Alias]; exists {
+			structObj.AddDependency(index, pkg.Element)
+		}
+	}
+
+	return structObj, nil
+}
 
 type StructAnalyzer struct{}
 

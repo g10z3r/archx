@@ -1,8 +1,9 @@
 package anthill
 
 import (
+	"context"
+	"fmt"
 	"go/ast"
-	"log"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
@@ -23,35 +24,43 @@ func NewVisitor(f *obj.FileObj, analyzerMap analyzer.AnalyzerMapOld, analyzers2 
 }
 
 func (v *Visitor) Visit(node ast.Node) ast.Visitor {
-	for _, analyzer := range v.analyzerMap {
-		if ok := analyzer.Check(node); ok {
-
-			obj := analyzer.Analyze(v.fileObj, node)
-			if obj != nil {
-				analyzer.Save(v.fileObj, obj) // Add ok return
-				break
-			}
-
-			log.Fatal("got nil object")
-			break
-
-		}
-	}
-
-	// for _, analyzer := range v.analyzer2Map {
+	// for _, analyzer := range v.analyzerMap {
 	// 	if ok := analyzer.Check(node); ok {
-	// 		o, err := analyzer.Analyze(context.Background(), v.fileObj, node)
-	// 		if err != nil {
-	// 			fmt.Println(err)
+
+	// 		obj := analyzer.Analyze(v.fileObj, node)
+	// 		if obj != nil {
+	// 			analyzer.Save(v.fileObj, obj) // Add ok return
 	// 			break
 	// 		}
 
-	// 		if o != nil {
-	// 			v.fileObj.AppendImport(o.(*obj.ImportObj))
-	// 			break
-	// 		}
+	// 		log.Fatal("got nil object")
+	// 		break
 
 	// 	}
 	// }
+
+	for _, analyzer := range v.analyzer2Map {
+		if ok := analyzer.Check(node); ok {
+			object, err := analyzer.Analyze(context.Background(), node)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+
+			if object != nil {
+				switch o := object.(type) {
+				case *obj.ImportObj:
+					v.fileObj.AppendImport(o)
+				case *obj.FuncObj:
+					v.fileObj.AppendFunc(o)
+				case *obj.StructObj:
+					v.fileObj.AppendStruct(o)
+				}
+
+				break
+			}
+
+		}
+	}
 	return v
 }

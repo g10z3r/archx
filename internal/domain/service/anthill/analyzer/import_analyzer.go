@@ -13,8 +13,8 @@ import (
 func NewImportAnalyzer(file *obj.FileObj) Analyzer[ast.Node, Object] {
 	return NewAnalyzer[ast.Node, Object](
 		file,
-		ImportAnalyze,
-		ImportCheck,
+		analyzeImportNode,
+		checkImportNode,
 	)
 }
 
@@ -65,11 +65,11 @@ func (a *ImportAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {
 	return obj.NewImportObj(importSpec, obj.ImportTypeInternal)
 }
 
-func ImportAnalyze(ctx context.Context, f *obj.FileObj, node ast.Node) (Object, error) {
+func analyzeImportNode(ctx context.Context, f *obj.FileObj, node ast.Node) (Object, error) {
 	importSpec, _ := node.(*ast.ImportSpec)
 
 	if importSpec.Path == nil && importSpec.Path.Value == "" {
-		return nil, nil // Add error return message
+		return nil, nil // TODO: add error return message
 	}
 
 	path := strings.Trim(importSpec.Path.Value, `"`)
@@ -84,7 +84,7 @@ func ImportAnalyze(ctx context.Context, f *obj.FileObj, node ast.Node) (Object, 
 	return obj.NewImportObj(importSpec, obj.ImportTypeInternal), nil
 }
 
-func ImportCheck(node ast.Node) bool {
+func checkImportNode(node ast.Node) bool {
 	_, ok := node.(*ast.ImportSpec)
 	return ok
 }

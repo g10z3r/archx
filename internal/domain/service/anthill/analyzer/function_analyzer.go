@@ -1,12 +1,56 @@
 package analyzer
 
 import (
+	"context"
 	"go/ast"
 	"go/token"
 	"log"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
+
+func NewFuncAnalyzer(file *obj.FileObj) Analyzer[ast.Node, Object] {
+	return NewAnalyzer[ast.Node, Object](
+		file,
+		analyzeFuncNode,
+		checkFuncNode,
+	)
+}
+
+func checkFuncNode(node ast.Node) bool {
+	_, ok := node.(*ast.FuncDecl)
+	return ok
+}
+
+func analyzeFuncNode(ctx context.Context, f *obj.FileObj, node ast.Node) (Object, error) {
+	funcDecl, _ := node.(*ast.FuncDecl)
+
+	var parentStruct *ast.Ident
+	if funcDecl.Recv != nil {
+		starExpr, ok := funcDecl.Recv.List[0].Type.(*ast.StarExpr)
+		if !ok {
+			return nil, nil // TODO: add error return message
+		}
+
+		parentStruct, ok = starExpr.X.(*ast.Ident)
+		if !ok {
+			return nil, nil // TODO: add error return message
+		}
+	}
+
+	params, deps, err := processFuncParams(f.FileSet, funcDecl, f.Entities.Imports.InternalImportsMeta)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	funcObj := obj.NewFuncObj(f.FileSet, funcDecl, params, deps, parentStruct)
+
+	if err := inspectFuncBody(funcDecl, funcObj, f.Entities.Imports.InternalImportsMeta); err != nil {
+		log.Fatal(err)
+	}
+
+	return funcObj, nil
+}
 
 type FunctionAnalyzer struct{}
 

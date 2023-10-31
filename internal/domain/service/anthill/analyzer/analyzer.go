@@ -13,7 +13,7 @@ type Object interface {
 
 type AnalyzerOld interface {
 	Name() string
-	Check(node ast.Node) bool
+	Check(node ast.Node) bool // TODO: add context as arg
 	Analyze(f *obj.FileObj, node ast.Node) Object
 	Save(f *obj.FileObj, obj Object)
 }
