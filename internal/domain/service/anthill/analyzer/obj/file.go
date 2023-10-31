@@ -13,7 +13,7 @@ type FileObjImports struct {
 	InternalImportsMeta map[string]int
 }
 
-type FileobjEntities struct {
+type FileObjEntities struct {
 	Imports         *FileObjImports
 	Structs         []*StructObj
 	StructIndexes   map[string]int
@@ -35,7 +35,7 @@ type FileObj struct {
 
 	Name     string
 	FileSet  *token.FileSet
-	Entities *FileobjEntities
+	Entities *FileObjEntities
 	Metadata *FileObjMeta
 	Stats    *FileObjStats
 }
@@ -82,7 +82,7 @@ func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 	return &FileObj{
 		Name:    fileName,
 		FileSet: fset,
-		Entities: &FileobjEntities{
+		Entities: &FileObjEntities{
 			Imports: &FileObjImports{
 				InternalImports:     make([]string, 0),
 				ExternalImports:     make([]string, 0),
