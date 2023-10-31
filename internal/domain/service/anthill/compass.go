@@ -111,7 +111,13 @@ func (c *Compass) parsePkg(fset *token.FileSet, pkgAst *ast.Package, targetDir, 
 
 func (c *Compass) parseFile(fset *token.FileSet, fileAst *ast.File, moduleName, fileName string) *obj.FileObj {
 	fileObj := obj.NewFileObj(fset, moduleName, filepath.Base(fileName))
-	visitor := NewVisitor(fileObj, c.config.Analysis)
+
+	visitor := NewVisitor(fileObj, c.config.Analysis, map[string]analyzer.Analyzer2[ast.Node, analyzer.Object]{
+		"import": analyzer.NewAnalyzer(
+			analyzer.ImportAnalyze,
+			analyzer.ImportCheck,
+		),
+	})
 	ast.Walk(visitor, fileAst)
 
 	return fileObj

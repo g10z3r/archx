@@ -1,6 +1,7 @@
 package analyzer
 
 import (
+	"context"
 	"go/ast"
 	"log"
 	"path"
@@ -54,4 +55,28 @@ func (a *ImportAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {
 	}
 
 	return obj.NewImportObj(importSpec, obj.ImportTypeInternal)
+}
+
+func ImportAnalyze(ctx context.Context, f *obj.FileObj, node ast.Node) (Object, error) {
+	importSpec, _ := node.(*ast.ImportSpec)
+
+	if importSpec.Path == nil && importSpec.Path.Value == "" {
+		return nil, nil // Add error return message
+	}
+
+	path := strings.Trim(importSpec.Path.Value, `"`)
+	if !strings.HasPrefix(path, f.Metadata.Module) {
+		return obj.NewImportObj(importSpec, obj.ImportTypeExternal), nil
+	}
+
+	if importSpec.Name != nil && importSpec.Name.Name == "_" {
+		return obj.NewImportObj(importSpec, obj.ImportTypeSideEffect), nil
+	}
+
+	return obj.NewImportObj(importSpec, obj.ImportTypeInternal), nil
+}
+
+func ImportCheck(node ast.Node) bool {
+	_, ok := node.(*ast.ImportSpec)
+	return ok
 }
