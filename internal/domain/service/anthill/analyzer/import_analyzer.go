@@ -10,6 +10,14 @@ import (
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
+func NewImportAnalyzer(file *obj.FileObj) Analyzer[ast.Node, Object] {
+	return NewAnalyzer[ast.Node, Object](
+		file,
+		ImportAnalyze,
+		ImportCheck,
+	)
+}
+
 type ImportAnalyzer struct{}
 
 func (a *ImportAnalyzer) Name() string {

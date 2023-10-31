@@ -19,7 +19,7 @@ func DefaultCompass(options ...CompassOption) *Compass {
 		config: &config.Config{
 			RootDir:   ".",
 			TargetDir: "",
-			Analysis:  make(analyzer.AnalyzerMap),
+			Analysis:  make(analyzer.AnalyzerMapOld),
 		},
 
 		eventCh:       make(chan event.Event, 1),

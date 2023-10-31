@@ -35,7 +35,7 @@ func NewCompass() *Compass {
 		eventCh:       eventCh,
 		unsubscribeCh: make(chan struct{}),
 		config: &config.Config{
-			Analysis: make(analyzer.AnalyzerMap),
+			Analysis: make(analyzer.AnalyzerMapOld),
 		},
 	}
 }
@@ -113,11 +113,7 @@ func (c *Compass) parseFile(fset *token.FileSet, fileAst *ast.File, moduleName, 
 	fileObj := obj.NewFileObj(fset, moduleName, filepath.Base(fileName))
 
 	visitor := NewVisitor(fileObj, c.config.Analysis, map[string]analyzer.Analyzer[ast.Node, analyzer.Object]{
-		"import": analyzer.NewAnalyzer(
-			fileObj,
-			analyzer.ImportAnalyze,
-			analyzer.ImportCheck,
-		),
+		"import": analyzer.NewImportAnalyzer(fileObj),
 	})
 	ast.Walk(visitor, fileAst)
 

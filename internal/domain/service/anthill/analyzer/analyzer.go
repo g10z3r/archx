@@ -18,10 +18,12 @@ type AnalyzerOld interface {
 	Save(f *obj.FileObj, obj Object)
 }
 
-type AnalyzerMap map[string]AnalyzerOld
+type AnalyzerMapOld map[string]AnalyzerOld
+
+// New
 
 type Analyzer[Input ast.Node, Output Object] interface {
-	Analyze(ctx context.Context, f *obj.FileObj, i Input) (Output, error)
+	Analyze(ctx context.Context, i Input) (Output, error)
 	Check(node ast.Node) bool
 }
 
@@ -46,8 +48,8 @@ type analyzer[Input ast.Node, Output Object] struct {
 	check   CheckFunc
 }
 
-func (a *analyzer[Input, Output]) Analyze(ctx context.Context, f *obj.FileObj, i Input) (Output, error) {
-	return a.analyze(ctx, f, i)
+func (a *analyzer[Input, Output]) Analyze(ctx context.Context, i Input) (Output, error) {
+	return a.analyze(ctx, a.file, i)
 }
 
 func (a *analyzer[Input, Output]) Check(node ast.Node) bool {
