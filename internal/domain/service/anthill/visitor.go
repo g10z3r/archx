@@ -50,18 +50,9 @@ func (v *Visitor) Visit(node ast.Node) ast.Visitor {
 			}
 
 			if object != nil {
-				switch o := object.(type) {
-				case *obj.ImportObj:
-					v.fileObj.AppendImport(o)
-				case *obj.FuncObj:
-					v.fileObj.AppendFunc(o)
-				case *obj.StructObj:
-					v.fileObj.AppendStruct(o)
-				}
-
+				v.fileObj.Save(object)
 				break
 			}
-
 		}
 	}
 	return v

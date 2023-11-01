@@ -1,6 +1,7 @@
 package obj
 
 import (
+	"errors"
 	"go/token"
 	"path"
 	"sync"
@@ -38,6 +39,25 @@ type FileObj struct {
 	Entities *FileObjEntitySet
 	Metadata *FileObjMeta
 	Stats    *FileObjStats
+}
+
+func (o *FileObj) Save(object Object) error {
+	switch obj := object.(type) {
+	case *ImportObj:
+		o.AppendImport(obj)
+		return nil
+
+	case *FuncObj:
+		o.AppendFunc(obj)
+		return nil
+
+	case *StructObj:
+		o.AppendStruct(obj)
+		return nil
+
+	default:
+		return errors.New("invalid object type")
+	}
 }
 
 func (o *FileObj) AppendImport(obj *ImportObj) {
