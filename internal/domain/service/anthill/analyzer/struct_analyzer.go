@@ -8,8 +8,8 @@ import (
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
-func NewStructAnalyzer(file *obj.FileObj) Analyzer[ast.Node, Object] {
-	return NewAnalyzer[ast.Node, Object](
+func NewStructAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
+	return NewAnalyzer[ast.Node, obj.Object](
 		file,
 		analyzeStructNode,
 		checkStructNode,
@@ -30,7 +30,7 @@ func checkStructNode(node ast.Node) bool {
 	return true
 }
 
-func analyzeStructNode(ctx context.Context, f *obj.FileObj, spec ast.Node) (Object, error) {
+func analyzeStructNode(ctx context.Context, f *obj.FileObj, spec ast.Node) (obj.Object, error) {
 	typeSpec, ok := spec.(*ast.TypeSpec)
 	if !ok {
 		return nil, nil // TODO: add error return message
@@ -75,7 +75,7 @@ func (a *StructAnalyzer) Check(node ast.Node) bool {
 	return true
 }
 
-func (a *StructAnalyzer) Save(f *obj.FileObj, object Object) {
+func (a *StructAnalyzer) Save(f *obj.FileObj, object obj.Object) {
 	structObj, ok := object.(*obj.StructObj)
 	if !ok {
 		log.Fatal("not a struct objects")
@@ -84,7 +84,7 @@ func (a *StructAnalyzer) Save(f *obj.FileObj, object Object) {
 	f.AppendStruct(structObj)
 }
 
-func (a *StructAnalyzer) Analyze(f *obj.FileObj, spec ast.Node) Object {
+func (a *StructAnalyzer) Analyze(f *obj.FileObj, spec ast.Node) obj.Object {
 	typeSpec, ok := spec.(*ast.TypeSpec)
 	if !ok {
 		return nil

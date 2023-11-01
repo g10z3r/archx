@@ -10,8 +10,8 @@ import (
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
-func NewImportAnalyzer(file *obj.FileObj) Analyzer[ast.Node, Object] {
-	return NewAnalyzer[ast.Node, Object](
+func NewImportAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
+	return NewAnalyzer[ast.Node, obj.Object](
 		file,
 		analyzeImportNode,
 		checkImportNode,
@@ -29,7 +29,7 @@ func (a *ImportAnalyzer) Check(node ast.Node) bool {
 	return ok
 }
 
-func (a *ImportAnalyzer) Save(f *obj.FileObj, object Object) {
+func (a *ImportAnalyzer) Save(f *obj.FileObj, object obj.Object) {
 	importObj, ok := object.(*obj.ImportObj)
 	if !ok {
 		log.Fatal("not a import objects")
@@ -46,7 +46,7 @@ func getAlias(importObj *obj.ImportObj) string {
 	return path.Base(importObj.Path)
 }
 
-func (a *ImportAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {
+func (a *ImportAnalyzer) Analyze(f *obj.FileObj, node ast.Node) obj.Object {
 	importSpec, _ := node.(*ast.ImportSpec)
 
 	if importSpec.Path == nil && importSpec.Path.Value == "" {
@@ -65,7 +65,7 @@ func (a *ImportAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {
 	return obj.NewImportObj(importSpec, obj.ImportTypeInternal)
 }
 
-func analyzeImportNode(ctx context.Context, f *obj.FileObj, node ast.Node) (Object, error) {
+func analyzeImportNode(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
 	importSpec, _ := node.(*ast.ImportSpec)
 
 	if importSpec.Path == nil && importSpec.Path.Value == "" {

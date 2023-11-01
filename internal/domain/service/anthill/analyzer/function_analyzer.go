@@ -9,8 +9,8 @@ import (
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
-func NewFuncAnalyzer(file *obj.FileObj) Analyzer[ast.Node, Object] {
-	return NewAnalyzer[ast.Node, Object](
+func NewFuncAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
+	return NewAnalyzer[ast.Node, obj.Object](
 		file,
 		analyzeFuncNode,
 		checkFuncNode,
@@ -22,7 +22,7 @@ func checkFuncNode(node ast.Node) bool {
 	return ok
 }
 
-func analyzeFuncNode(ctx context.Context, f *obj.FileObj, node ast.Node) (Object, error) {
+func analyzeFuncNode(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
 	funcDecl, _ := node.(*ast.FuncDecl)
 
 	var parentStruct *ast.Ident
@@ -63,7 +63,7 @@ func (a *FunctionAnalyzer) Check(node ast.Node) bool {
 	return ok
 }
 
-func (a *FunctionAnalyzer) Save(f *obj.FileObj, object Object) {
+func (a *FunctionAnalyzer) Save(f *obj.FileObj, object obj.Object) {
 	funcObj, ok := object.(*obj.FuncObj)
 	if !ok {
 		log.Fatal("not a func objects")
@@ -72,7 +72,7 @@ func (a *FunctionAnalyzer) Save(f *obj.FileObj, object Object) {
 	f.AppendFunc(funcObj)
 }
 
-func (a *FunctionAnalyzer) Analyze(f *obj.FileObj, node ast.Node) Object {
+func (a *FunctionAnalyzer) Analyze(f *obj.FileObj, node ast.Node) obj.Object {
 	funcDecl, _ := node.(*ast.FuncDecl)
 
 	var parentStruct *ast.Ident
