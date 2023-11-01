@@ -20,7 +20,11 @@ import (
 )
 
 type Compass struct {
-	mutex    sync.Mutex
+	noCopy noCopy
+
+	mutex sync.RWMutex
+	once  sync.Once
+
 	pipeline *pipe.Pipeline
 	config   *config.Config
 
@@ -53,8 +57,13 @@ func (c *Compass) DeleteAnalyzer(name string) {
 	delete(c.config.Analysis, name)
 }
 
-func (r *Compass) Subscribe() (<-chan event.Event, chan struct{}) {
-	return r.eventCh, r.unsubscribeCh
+func (r *Compass) Subscribe(eventCh chan event.Event) chan struct{} {
+	r.once.Do(func() {
+		r.eventCh = eventCh
+		r.unsubscribeCh = make(chan struct{})
+	})
+
+	return r.unsubscribeCh
 }
 
 func (c *Compass) Run(ctx context.Context) {
@@ -119,8 +128,8 @@ func (c *Compass) parseFile(fset *token.FileSet, fileAst *ast.File, moduleName, 
 }
 
 // TODO: tmp func
-func getAnalyzers(fileObj *obj.FileObj) map[string]analyzer.Analyzer[ast.Node, analyzer.Object] {
-	return map[string]analyzer.Analyzer[ast.Node, analyzer.Object]{
+func getAnalyzers(fileObj *obj.FileObj) map[string]analyzer.Analyzer[ast.Node, obj.Object] {
+	return map[string]analyzer.Analyzer[ast.Node, obj.Object]{
 		"import": analyzer.NewImportAnalyzer(fileObj),
 		"func":   analyzer.NewFuncAnalyzer(fileObj),
 		"struct": analyzer.NewStructAnalyzer(fileObj),

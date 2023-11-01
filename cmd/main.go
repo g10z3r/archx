@@ -46,7 +46,9 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	eventCh, unsubscribeCh := compass.Subscribe()
+	eventCh := make(chan event.Event)
+	unsubscribeCh := compass.Subscribe(eventCh)
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
