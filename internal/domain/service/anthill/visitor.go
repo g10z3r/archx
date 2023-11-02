@@ -4,56 +4,66 @@ import (
 	"context"
 	"fmt"
 	"go/ast"
+	"sync"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
-type Visitor struct {
+type Visitor interface {
+	VisitWithContext(ctx context.Context, node ast.Node) (w Visitor)
+}
+
+type visitor struct {
 	noCopy noCopy
 
-	fileObj      *obj.FileObj
-	analyzerMap  analyzer.AnalyzerMapOld
-	analyzer2Map map[string]analyzer.Analyzer[ast.Node, obj.Object]
+	fileObj *obj.FileObj
+
+	// Used to determine the type of an ast.Node.
+	// This function helps identify the specific type of a node within the abstract syntax tree (AST).
+	determinator func(ast.Node) uint
+	analyzerMap  analyzer.AnalyzerMap[uint, ast.Node, obj.Object]
+
+	once sync.Once
 }
 
-func NewVisitor(f *obj.FileObj, analyzerMap analyzer.AnalyzerMapOld, analyzers2 map[string]analyzer.Analyzer[ast.Node, obj.Object]) *Visitor {
-	return &Visitor{
-		analyzerMap:  analyzerMap,
-		analyzer2Map: analyzers2,
-		fileObj:      f,
-	}
+type visitorConfig struct {
+	file         *obj.FileObj
+	alzMap       analyzer.AnalyzerMap[uint, ast.Node, obj.Object]
+	determinator func(ast.Node) uint
 }
 
-func (v *Visitor) Visit(node ast.Node) ast.Visitor {
-	// for _, analyzer := range v.analyzerMap {
-	// 	if ok := analyzer.Check(node); ok {
+func NewVisitor(cfg visitorConfig) *visitor {
+	v := new(visitor)
+	v.once.Do(func() {
+		v.fileObj = cfg.file
+		v.analyzerMap = cfg.alzMap
+		v.determinator = cfg.determinator
 
-	// 		obj := analyzer.Analyze(v.fileObj, node)
-	// 		if obj != nil {
-	// 			analyzer.Save(v.fileObj, obj) // Add ok return
-	// 			break
-	// 		}
+	})
 
-	// 		log.Fatal("got nil object")
-	// 		break
+	return v
+}
 
-	// 	}
-	// }
-
-	for _, analyzer := range v.analyzer2Map {
-		if ok := analyzer.Check(node); ok {
-			object, err := analyzer.Analyze(context.Background(), node)
-			if err != nil {
-				fmt.Println(err)
-				break
-			}
-
-			if object != nil {
-				v.fileObj.Save(object)
-				break
-			}
-		}
+func (v *visitor) VisitWithContext(ctx context.Context, node ast.Node) Visitor {
+	if node == nil {
+		return v
 	}
+
+	analyzer, ok := v.analyzerMap[v.determinator(node)]
+	if !ok {
+		return v
+	}
+
+	object, err := analyzer.Analyze(ctx, node)
+	if err != nil {
+		fmt.Println(err) // TODO: decide later how to handle the error
+		return v
+	}
+
+	if err := v.fileObj.Save(object); err != nil {
+		fmt.Println(err) // TODO: decide later how to handle the error
+	}
+
 	return v
 }

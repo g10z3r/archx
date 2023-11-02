@@ -2,52 +2,40 @@ package analyzer
 
 import (
 	"context"
-	"go/ast"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
-type AnalyzerOld interface {
-	Name() string
-	Check(node ast.Node) bool
-	Analyze(f *obj.FileObj, node ast.Node) obj.Object
-	Save(f *obj.FileObj, obj obj.Object)
-}
+// AnalyzerFactoryMap is a map that associates keys of a specified type (Key) with AnalyzerFactory functions.
+// It is used to store and retrieve AnalyzerFactory functions that can create Analyzers for various types.
+type AnalyzerFactoryMap[Key comparable, Input, Output any] map[Key]AnalyzerFactory[Input, Output]
 
-type AnalyzerMapOld map[string]AnalyzerOld
-
-// New
+// AnalyzerMap is a map that associates keys of a specified type (Key) with Analyzer instances.
+// It is used to store and retrieve Analyzer implementations for various types.
+type AnalyzerMap[Key comparable, Input, Output any] map[Key]Analyzer[Input, Output]
 
 type Analyzer[Input, Output any] interface {
 	Analyze(ctx context.Context, i Input) (Output, error)
-	Check(i Input) bool // TODO: add context as arg
 }
 
-type CheckFunc[Input any] func(node Input) bool
+type AnalyzerFactory[Input, Output any] func(f *obj.FileObj) Analyzer[Input, Output]
 type AnalyzeFunc[Input, Output any] func(ctx context.Context, f *obj.FileObj, i Input) (Output, error)
 
 func NewAnalyzer[Input, Output any](
 	file *obj.FileObj,
 	analyze AnalyzeFunc[Input, Output],
-	check CheckFunc[Input],
 ) Analyzer[Input, Output] {
 	return &analyzer[Input, Output]{
-		file,
-		analyze,
-		check,
+		file:    file,
+		analyze: analyze,
 	}
 }
 
 type analyzer[Input, Output any] struct {
 	file    *obj.FileObj
 	analyze AnalyzeFunc[Input, Output]
-	check   CheckFunc[Input]
 }
 
 func (a *analyzer[Input, Output]) Analyze(ctx context.Context, i Input) (Output, error) {
 	return a.analyze(ctx, a.file, i)
-}
-
-func (a *analyzer[Input, Output]) Check(node Input) bool {
-	return a.check(node)
 }

@@ -2,6 +2,7 @@ package obj
 
 import (
 	"errors"
+	"fmt"
 	"go/token"
 	"path"
 	"sync"
@@ -56,7 +57,7 @@ func (o *FileObj) Save(object Object) error {
 		return nil
 
 	default:
-		return errors.New("invalid object type")
+		return errors.New(fmt.Sprintf("%s: invalid object type", obj.Type()))
 	}
 }
 
