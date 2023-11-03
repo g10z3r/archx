@@ -11,18 +11,23 @@ import (
 )
 
 type Visitor interface {
+	// Custom implementation of standard the ast.Walk function.
+	// Was implemented because the standard ast.Walk function does not have a context inside.
 	VisitWithContext(ctx context.Context, node ast.Node) (w Visitor)
 }
 
 type visitor struct {
 	noCopy noCopy
 
+	// Data structure for the analyzed file
 	fileObj *obj.FileObj
 
 	// Used to determine the type of an ast.Node.
 	// This function helps identify the specific type of a node within the abstract syntax tree (AST).
 	determinator func(ast.Node) uint
-	analyzerMap  analyzer.AnalyzerMap[uint, ast.Node, obj.Object]
+
+	// Created map of analyzers for a specific file
+	analyzerMap analyzer.AnalyzerMap[uint, ast.Node, obj.Object]
 
 	once sync.Once
 }

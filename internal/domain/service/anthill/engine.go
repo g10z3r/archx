@@ -5,11 +5,9 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"log"
 	"path/filepath"
 	"sync"
 
-	"github.com/g10z3r/archx/internal/domain/service/anthill/collector"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
@@ -17,7 +15,15 @@ import (
 type Engine struct {
 	noCopy noCopy
 
-	afMap EngineAFMap
+	// The name of the module of the analyzed project.
+	// This name must be identical to the module name in the `go.mod` file.
+	// Required to identify internal dependencies.
+	ModuleName string
+
+	// Map of functions of analyzer creators. The map key is the analyzer key,
+	// which is identical to the key for the already created analyzer in the map of analyzers.
+	// Used to create a map of analyzers for each visitor.
+	analyzerFactoryMap EngineAFMap
 
 	// Used to determine the type of an ast.Node.
 	// This function helps identify the specific type of a node within the abstract syntax tree (AST).
@@ -30,11 +36,18 @@ type Engine struct {
 	unsubscribeCh chan struct{}
 }
 
-func NewEngine(alzFactoryMap EngineAFMap, determinator func(ast.Node) uint) *Engine {
+type EngineConfig struct {
+	ModuleName         string
+	Determinator       func(ast.Node) uint
+	AnalyzerFactoryMap EngineAFMap
+}
+
+func NewEngine(cfg *EngineConfig) *Engine {
 	engine := new(Engine)
 	engine.once.Do(func() {
-		engine.afMap = alzFactoryMap
-		engine.determinator = determinator
+		engine.ModuleName = cfg.ModuleName
+		engine.analyzerFactoryMap = cfg.AnalyzerFactoryMap
+		engine.determinator = cfg.Determinator
 	})
 
 	return engine
@@ -60,45 +73,63 @@ func (e *Engine) Subscribe(eventCh chan event.Event) chan struct{} {
 // 	}
 // }
 
-func (e *Engine) ParseDir(info *collector.Info, targetDir string) ([]*obj.PackageObj, error) {
+func (e *Engine) ParseDir(targetDir string) ([]*obj.PackageObj, error) {
 	fset := token.NewFileSet()
 	pkg, err := parser.ParseDir(fset, targetDir, nil, parser.AllErrors)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	type resultDTO struct {
-		sync.Mutex
-		data []*obj.PackageObj
+	// processes each package either concurrently or sequentially based on their count
+	if len(pkg) > 1 {
+		return e.processMultiplePkgConcurrently(fset, pkg, targetDir), nil
 	}
 
-	result := new(resultDTO)
-
-	var wg sync.WaitGroup
-	for _, pkgAst := range pkg {
-		wg.Add(1)
-		go func(pkgAst *ast.Package) {
-			result.Lock()
-			result.data = append(result.data, e.parsePkg(fset, pkgAst, targetDir, info.ModuleName))
-			result.Unlock()
-
-			wg.Done()
-		}(pkgAst)
-	}
-
-	wg.Wait()
-
-	return result.data, nil
+	return e.processSinglePkg(fset, pkg, targetDir), nil
 }
 
-func (e *Engine) parsePkg(fset *token.FileSet, pkgAst *ast.Package, targetDir, moduleName string) *obj.PackageObj {
+// processes a single package without concurrency
+func (e *Engine) processSinglePkg(fset *token.FileSet, pkg map[string]*ast.Package, targetDir string) []*obj.PackageObj {
+	var results []*obj.PackageObj
+
+	for _, pkgAst := range pkg {
+		results = append(results, e.parsePkg(fset, pkgAst, targetDir))
+	}
+
+	return results
+}
+
+// processes multiple packages concurrently
+func (e *Engine) processMultiplePkgConcurrently(fset *token.FileSet, pkg map[string]*ast.Package, targetDir string) []*obj.PackageObj {
+	var results []*obj.PackageObj
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for _, pkgAst := range pkg {
+		wg.Add(1)
+		go func(pa *ast.Package) {
+			defer wg.Done()
+			pkgResult := e.parsePkg(fset, pa, targetDir)
+
+			mu.Lock()
+			results = append(results, pkgResult)
+			mu.Unlock()
+		}(pkgAst)
+	}
+	wg.Wait()
+
+	return results
+}
+
+func (e *Engine) parsePkg(fset *token.FileSet, pkgAst *ast.Package, targetDir string) *obj.PackageObj {
+	var wg sync.WaitGroup
 	pkgObj := obj.NewPackageObj(pkgAst, targetDir)
 
-	var wg sync.WaitGroup
 	for fileName, fileAst := range pkgAst.Files {
 		wg.Add(1)
+
 		go func(fileAst *ast.File, fileName string) {
-			fileObj := e.parseFile(fset, fileAst, moduleName, fileName)
+			fileObj := e.parseFile(fset, fileAst, fileName)
 			pkgObj.AppendFile(fileObj)
 
 			wg.Done()
@@ -109,11 +140,11 @@ func (e *Engine) parsePkg(fset *token.FileSet, pkgAst *ast.Package, targetDir, m
 	return pkgObj
 }
 
-func (e *Engine) parseFile(fset *token.FileSet, fileAst *ast.File, moduleName, fileName string) *obj.FileObj {
-	fileObj := obj.NewFileObj(fset, moduleName, filepath.Base(fileName))
+func (e *Engine) parseFile(fset *token.FileSet, fileAst *ast.File, fileName string) *obj.FileObj {
+	fileObj := obj.NewFileObj(fset, e.ModuleName, filepath.Base(fileName))
 	visitor := NewVisitor(visitorConfig{
 		file:         fileObj,
-		alzMap:       e.afMap.Initialize(fileObj),
+		alzMap:       e.analyzerFactoryMap.Initialize(fileObj), // Initializing the analyzer map
 		determinator: e.determinator,
 	})
 

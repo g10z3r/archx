@@ -55,7 +55,6 @@ func main() {
 
 	fmt.Printf("Записанные логи:\n%s\n", myWriter.data)
 
-	compass := anthill.NewEngine(getAnalyzers(), baseNodeDeterminator)
 	// compass.Run(context.Background())
 	clct := collector.DefaultCollector(
 		collector.WithTargetDir("example"),
@@ -63,6 +62,12 @@ func main() {
 	if err := clct.Explore(); err != nil {
 		log.Fatal(err)
 	}
+
+	compass := anthill.NewEngine(&anthill.EngineConfig{
+		AnalyzerFactoryMap: getAnalyzers(),
+		Determinator:       baseNodeDeterminator,
+		ModuleName:         clct.GetInfo().ModuleName,
+	})
 
 	// var wg sync.WaitGroup
 
@@ -94,7 +99,7 @@ func main() {
 	// }()
 
 	for _, p := range clct.GetAllPackageDirs() {
-		data, err := compass.ParseDir(clct.GetInfo(), p)
+		data, err := compass.ParseDir(p)
 		if err != nil {
 
 		}

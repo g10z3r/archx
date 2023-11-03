@@ -23,12 +23,19 @@ type FieldObj struct {
 	Metadata   *FieldObjMeta
 }
 
+type StructObjMeta struct {
+	LineCount int
+}
+
 type StructObj struct {
 	Start        token.Pos
 	End          token.Pos
 	Name         *string
 	Fields       []*FieldObj
 	Dependencies map[string]*EntityDepObj
+	Incomplete   bool
+	Valid        bool
+	Metadata     *StructObjMeta
 	isEmbedded   bool
 }
 
@@ -66,7 +73,12 @@ func NewStructObj(fset *token.FileSet, res *ast.StructType, isEmbedded bool, nam
 			End:          res.End(),
 			Fields:       mapMeta.fieldsSet,
 			Dependencies: dependencies,
-			isEmbedded:   isEmbedded,
+			Incomplete:   res.Incomplete,
+			Valid:        res.Struct.IsValid(),
+			Metadata: &StructObjMeta{
+				LineCount: CalcEntityLOC(fset, res),
+			},
+			isEmbedded: isEmbedded,
 		},
 		mapMeta.usedPackages,
 		nil
