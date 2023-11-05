@@ -61,7 +61,7 @@ func getParentStruct(funcDecl *ast.FuncDecl) (*ast.Ident, error) {
 }
 
 func inspectFuncBody(funcDecl *ast.FuncDecl, funcEntity *obj.FuncTypeObj, impMeta map[string]int) error {
-	// get the recipient's name if it is a structure method
+	// get the receiver's name if it is a structure method
 	var receiverName string
 	if funcDecl.Recv != nil && len(funcDecl.Recv.List) > 0 {
 		receiverName = funcDecl.Recv.List[0].Names[0].Name
