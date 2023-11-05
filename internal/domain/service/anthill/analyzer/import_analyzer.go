@@ -9,10 +9,10 @@ import (
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
-func NewImportAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
+func NewImportSpecAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
 	return NewAnalyzer[ast.Node, obj.Object](
 		file,
-		analyzeImportNode,
+		analyzeImportSpec,
 	)
 }
 
@@ -21,7 +21,7 @@ func NewImportAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
 // 	return ok
 // }
 
-func analyzeImportNode(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
+func analyzeImportSpec(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
 	importSpec, _ := node.(*ast.ImportSpec)
 
 	if importSpec.Path == nil && importSpec.Path.Value == "" {

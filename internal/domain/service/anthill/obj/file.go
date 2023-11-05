@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/token"
 	"path"
+	"reflect"
 	"sync"
 )
 
@@ -17,9 +18,10 @@ type FileObjImportTree struct {
 
 type FileObjEntitySet struct {
 	Imports         *FileObjImportTree
-	Structs         []*StructObj
+	Types           []*TypeObj
+	Structs         []*StructTypeObj
 	StructIndexes   map[string]int
-	Functions       []*FuncObj
+	Functions       []*FuncTypeObj
 	FunctionIndexes map[string]int
 }
 
@@ -48,17 +50,32 @@ func (o *FileObj) Save(object Object) error {
 		o.AppendImport(obj)
 		return nil
 
-	case *FuncObj:
+	case *FuncTypeObj:
 		o.AppendFunc(obj)
 		return nil
 
-	case *StructObj:
+	case *StructTypeObj:
 		o.AppendStruct(obj)
 		return nil
 
+	case *TypeObj:
+		o.AppendType(obj)
+		return nil
+
 	default:
-		return errors.New(fmt.Sprintf("%s: invalid object type", obj.Type()))
+		return errors.New(fmt.Sprintf("%s: invalid object type", reflect.TypeOf(obj)))
 	}
+}
+
+func (o *FileObj) AppendType(typ *TypeObj) {
+	o.mutex.Lock()
+	o.Entities.Types = append(o.Entities.Types, typ)
+	o.mutex.Unlock()
+}
+
+func (o *FileObj) IsInternalDependency(alias string) (int, bool) {
+	index, exists := o.Entities.Imports.InternalImportsMeta[alias]
+	return index, exists
 }
 
 func (o *FileObj) AppendImport(obj *ImportObj) {
@@ -80,14 +97,14 @@ func (o *FileObj) AppendImport(obj *ImportObj) {
 	o.mutex.Unlock()
 }
 
-func (o *FileObj) AppendStruct(obj *StructObj) {
+func (o *FileObj) AppendStruct(obj *StructTypeObj) {
 	o.mutex.Lock()
 	o.Entities.StructIndexes[*obj.Name] = len(o.Entities.Structs)
 	o.Entities.Structs = append(o.Entities.Structs, obj)
 	o.mutex.Unlock()
 }
 
-func (o *FileObj) AppendFunc(obj *FuncObj) {
+func (o *FileObj) AppendFunc(obj *FuncTypeObj) {
 	o.mutex.Lock()
 
 	if obj.Receiver != nil {
@@ -110,9 +127,10 @@ func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 				SideEffectImports:   make([]string, 0),
 				InternalImportsMeta: make(map[string]int),
 			},
-			Structs:         make([]*StructObj, 0),
+			Types:           make([]*TypeObj, 0),
+			Structs:         make([]*StructTypeObj, 0),
 			StructIndexes:   make(map[string]int),
-			Functions:       make([]*FuncObj, 0),
+			Functions:       make([]*FuncTypeObj, 0),
 			FunctionIndexes: make(map[string]int),
 		},
 		Metadata: &FileObjMeta{

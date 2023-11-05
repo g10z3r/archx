@@ -37,7 +37,7 @@ type StructDAO struct {
 // 	}
 // }
 
-func MapStructEntity(e *obj.StructObj) *StructDAO {
+func MapStructEntity(e *obj.StructTypeObj) *StructDAO {
 	fields := make([]*FieldDAO, 0, len(e.Fields))
 	for i := 0; i < len(e.Fields); i++ {
 		fields = append(fields, mapFieldEntity(e.Fields[i]))
@@ -82,7 +82,7 @@ func mapFieldEntity(e *obj.FieldObj) *FieldDAO {
 // 	}
 // }
 
-func mapDependencyEntity(e *obj.EntityDepObj) *DependencyDAO {
+func mapDependencyEntity(e *obj.DependencyObj) *DependencyDAO {
 	return &DependencyDAO{
 		ImportIndex: e.ImportIndex,
 		Usage:       e.Usage,

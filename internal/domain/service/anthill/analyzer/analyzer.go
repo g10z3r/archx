@@ -20,6 +20,7 @@ type Analyzer[Input, Output any] interface {
 
 type AnalyzerFactory[Input, Output any] func(f *obj.FileObj) Analyzer[Input, Output]
 type AnalyzeFunc[Input, Output any] func(ctx context.Context, f *obj.FileObj, i Input) (Output, error)
+type SplitterFunc[Input, Output any] func(ctx context.Context, i Input) AnalyzeFunc[Input, Output]
 
 func NewAnalyzer[Input, Output any](
 	file *obj.FileObj,

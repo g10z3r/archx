@@ -1,6 +1,7 @@
 package obj
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -11,41 +12,26 @@ const (
 	NotEmbedded = false
 )
 
-type FieldObjMeta struct {
-	LineCount int
-}
-
-type FieldObj struct {
-	Name       string
-	Type       string
-	Embedded   *StructObj
-	Visibility bool
-	Metadata   *FieldObjMeta
-}
-
 type StructObjMeta struct {
 	LineCount int
 }
 
-type StructObj struct {
-	Start        token.Pos
-	End          token.Pos
+type StructTypeObj struct {
 	Name         *string
 	Fields       []*FieldObj
-	Dependencies map[string]*EntityDepObj
+	Dependencies map[string]*DependencyObj
 	Incomplete   bool
 	Valid        bool
 	Metadata     *StructObjMeta
-	isEmbedded   bool
 }
 
-func (o *StructObj) Type() string {
+func (o *StructTypeObj) Type() string {
 	return "struct"
 }
 
-func (o *StructObj) AddDependency(importIndex int, element string) {
+func (o *StructTypeObj) AddDependency(importIndex int, element string) {
 	if _, exists := o.Dependencies[element]; !exists {
-		o.Dependencies[element] = &EntityDepObj{
+		o.Dependencies[element] = &DependencyObj{
 			ImportIndex: importIndex,
 			Usage:       1,
 		}
@@ -56,31 +42,38 @@ func (o *StructObj) AddDependency(importIndex int, element string) {
 	o.Dependencies[element].Usage++
 }
 
-func NewStructObj(fset *token.FileSet, res *ast.StructType, isEmbedded bool, name *string) (*StructObj, []UsedPackage, error) {
-	mapMeta, err := extractFieldMap(fset, res.Fields.List)
+func NewStructObj(fset *token.FileSet, node ast.Node, name *string) (*StructTypeObj, []UsedPackage, error) {
+	var structType *ast.StructType
+
+	typeSpec, ok := node.(*ast.TypeSpec)
+	if ok {
+		structType, ok = typeSpec.Type.(*ast.StructType)
+		if !ok {
+			return nil, nil, errors.New("some error from NewStructObj 1") // TODO: add normal error return message
+		}
+	} else {
+		structType, ok = node.(*ast.StructType)
+		if !ok {
+			return nil, nil, errors.New("some error from NewStructObj 2") // TODO: add normal error return message
+		}
+	}
+
+	extractedFieldsData, err := extractFieldMap(fset, structType.Fields.List)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to extract field map: %w", err)
 	}
 
-	var dependencies map[string]*EntityDepObj
-	if !isEmbedded {
-		dependencies = make(map[string]*EntityDepObj, len(mapMeta.usedPackages))
-	}
-
-	return &StructObj{
+	return &StructTypeObj{
 			Name:         name,
-			Start:        res.Pos(),
-			End:          res.End(),
-			Fields:       mapMeta.fieldsSet,
-			Dependencies: dependencies,
-			Incomplete:   res.Incomplete,
-			Valid:        res.Struct.IsValid(),
+			Fields:       extractedFieldsData.fieldsSet,
+			Dependencies: make(map[string]*DependencyObj, len(extractedFieldsData.usedPackages)),
+			Incomplete:   structType.Incomplete,
+			Valid:        structType.Struct.IsValid(),
 			Metadata: &StructObjMeta{
-				LineCount: CalcEntityLOC(fset, res),
+				LineCount: CalcEntityLOC(fset, structType),
 			},
-			isEmbedded: isEmbedded,
 		},
-		mapMeta.usedPackages,
+		extractedFieldsData.usedPackages,
 		nil
 }
 
@@ -89,12 +82,7 @@ type UsedPackage struct {
 	Alias, Element string
 }
 
-type fieldMapMeta struct {
-	usedPackages []UsedPackage
-	fieldsSet    []*FieldObj
-}
-
-func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta, error) {
+func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*extractedFieldsData, error) {
 	fields := make([]*FieldObj, 0, len(fieldList))
 	usedPackages := make([]UsedPackage, 0, len(fieldList))
 
@@ -114,6 +102,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 				Embedded:   fieldMetaData.EmbeddedStruct,
 				Visibility: false,
 			})
+
 			continue
 		}
 
@@ -123,14 +112,11 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*fieldMapMeta
 				Type:       fieldMetaData.Type,
 				Embedded:   fieldMetaData.EmbeddedStruct,
 				Visibility: name.IsExported(),
-				Metadata: &FieldObjMeta{
-					LineCount: CalcEntityLOC(fset, name),
-				},
 			})
 		}
 	}
 
-	return &fieldMapMeta{
+	return &extractedFieldsData{
 		fieldsSet:    fields,
 		usedPackages: usedPackages,
 	}, nil

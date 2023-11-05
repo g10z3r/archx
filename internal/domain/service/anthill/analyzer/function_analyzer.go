@@ -3,25 +3,43 @@ package analyzer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go/ast"
 	"go/token"
+	"reflect"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
-func NewFuncAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
+func NewFuncDeclAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
 	return NewAnalyzer[ast.Node, obj.Object](
 		file,
-		analyzeFuncNode,
+		analyzeFuncDecl,
 	)
 }
 
-// func checkFuncNode(node ast.Node) bool {
-// 	_, ok := node.(*ast.FuncDecl)
-// 	return ok
-// }
+func NewFuncTypeAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
+	return NewAnalyzer[ast.Node, obj.Object](
+		file,
+		analyzeFuncType,
+	)
+}
 
-func analyzeFuncNode(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
+func analyzeFuncType(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
+	typeSpec, ok := node.(*ast.TypeSpec)
+	if !ok {
+		return nil, fmt.Errorf("some error from analyzeStructNode : %s", reflect.TypeOf(node).String()) // TODO: add normal error return message
+	}
+
+	typeObject, err := obj.NewTypeObj(f, typeSpec)
+	if err != nil {
+		return nil, errors.New("some error from analyzeStructNode 4") // TODO: add normal error return message
+	}
+
+	return typeObject, nil
+}
+
+func analyzeFuncDecl(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
 	funcDecl, _ := node.(*ast.FuncDecl)
 
 	ps, err := getParentStruct(funcDecl)
@@ -65,7 +83,7 @@ func getParentStruct(funcDecl *ast.FuncDecl) (*ast.Ident, error) {
 	return nil, errors.New("invalid receiver type in method declaration")
 }
 
-func inspectFuncBody(funcDecl *ast.FuncDecl, funcEntity *obj.FuncObj, impMeta map[string]int) error {
+func inspectFuncBody(funcDecl *ast.FuncDecl, funcEntity *obj.FuncTypeObj, impMeta map[string]int) error {
 	// get the recipient's name if it is a structure method
 	var receiverName string
 	if funcDecl.Recv != nil && len(funcDecl.Recv.List) > 0 {
@@ -113,7 +131,7 @@ func inspectFuncBody(funcDecl *ast.FuncDecl, funcEntity *obj.FuncObj, impMeta ma
 }
 
 type funcObjParamMap map[string]*obj.FuncObjParam
-type depObjMap map[string]*obj.EntityDepObj
+type depObjMap map[string]*obj.DependencyObj
 
 func processFuncParams(fset *token.FileSet, funcDecl *ast.FuncDecl, impMeta map[string]int) (funcObjParamMap, depObjMap, error) {
 	var params map[string]*obj.FuncObjParam
@@ -121,7 +139,7 @@ func processFuncParams(fset *token.FileSet, funcDecl *ast.FuncDecl, impMeta map[
 		params = make(map[string]*obj.FuncObjParam)
 	}
 
-	deps := map[string]*obj.EntityDepObj{}
+	deps := map[string]*obj.DependencyObj{}
 	for _, param := range funcDecl.Type.Params.List {
 		for _, name := range param.Names {
 			typ, err := obj.ExtractExprAsType(fset, param.Type)
@@ -138,7 +156,7 @@ func processFuncParams(fset *token.FileSet, funcDecl *ast.FuncDecl, impMeta map[
 			}
 
 			if index, exists := impMeta[typ.UsedPackages[0].Alias]; exists {
-				deps[typ.UsedPackages[0].Element] = &obj.EntityDepObj{
+				deps[typ.UsedPackages[0].Element] = &obj.DependencyObj{
 					ImportIndex: index,
 				}
 			}

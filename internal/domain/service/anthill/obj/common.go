@@ -8,7 +8,7 @@ import (
 	"go/token"
 )
 
-type EntityDepObj struct {
+type DependencyObj struct {
 	ImportIndex int
 	Usage       int
 }
@@ -25,13 +25,13 @@ func CalcEntityLOC(fset *token.FileSet, expr astExpr) int {
 type exprTypeMetaData struct {
 	Type           string
 	UsedPackages   []UsedPackage
-	EmbeddedStruct *StructObj
+	EmbeddedStruct *StructTypeObj
 }
 
-func ExtractExprAsType(fset *token.FileSet, expr ast.Expr) (*exprTypeMetaData, error) {
+func ExtractExprAsType(fset *token.FileSet, expr ast.Node) (*exprTypeMetaData, error) {
 	switch ft := expr.(type) {
 	case *ast.StructType:
-		embedded, usedPackages, err := NewStructObj(fset, ft, true, nil)
+		embedded, usedPackages, err := NewStructObj(fset, ft, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -63,5 +63,39 @@ func ExtractExprAsType(fset *token.FileSet, expr ast.Expr) (*exprTypeMetaData, e
 		return &exprTypeMetaData{
 			Type: buf.String(),
 		}, nil
+	}
+}
+
+func extractTypeParams(fset *token.FileSet, n ast.Node) {
+	ts, ok := n.(*ast.TypeSpec)
+
+	fmt.Println(ok)
+
+	if ts == nil {
+		return
+	}
+
+	// Проверяем, есть ли у структуры параметры типа
+	// _, ok := ts.Type.(*ast.StructType)
+	// if !ok {
+	// 	return
+	// }
+
+	// Проверяем, использует ли определение структуры дженерики
+	if ts.TypeParams != nil {
+		fm, err := extractFieldMap(fset, ts.TypeParams.List)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		for _, f := range fm.fieldsSet {
+			fmt.Println(f.Name, f.Type)
+		}
+
+		// for _, field := range ts.TypeParams.List {
+		// 	for _, name := range field.Names {
+		// 		fmt.Printf("Найдена структура с дженериком: %s, Поле: %s\n", ts.Name.Name, name.Name, name.)
+		// 	}
+		// }
 	}
 }

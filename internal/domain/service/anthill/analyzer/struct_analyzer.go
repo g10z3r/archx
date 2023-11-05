@@ -3,44 +3,27 @@ package analyzer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go/ast"
+	"reflect"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
-func NewStructAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
+func NewStructTypeAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
 	return NewAnalyzer[ast.Node, obj.Object](
 		file,
-		analyzeStructNode,
+		analyzeStructType,
 	)
 }
 
-// func checkStructNode(node ast.Node) bool {
-// 	typeSpec, ok := node.(*ast.TypeSpec)
-// 	if !ok {
-// 		return false
-// 	}
-
-// 	_, ok = typeSpec.Type.(*ast.StructType)
-// 	if !ok {
-// 		return false
-// 	}
-
-// 	return true
-// }
-
-func analyzeStructNode(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
+func analyzeStructType(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
 	typeSpec, ok := node.(*ast.TypeSpec)
 	if !ok {
-		return nil, errors.New("some error from analyzeStructNode 1") // TODO: add normal error return message
+		return nil, fmt.Errorf("some error from analyzeStructNode : %s", reflect.TypeOf(node).String()) // TODO: add normal error return message
 	}
 
-	t, ok := node.(*ast.TypeSpec).Type.(*ast.StructType)
-	if !ok {
-		return nil, errors.New("some error from analyzeStructNode 2") // TODO: add normal error return message
-	}
-
-	structObj, usedPackages, err := obj.NewStructObj(f.FileSet, t, obj.NotEmbedded, &typeSpec.Name.Name)
+	structObj, usedPackages, err := obj.NewStructObj(f.FileSet, typeSpec, &typeSpec.Name.Name)
 	if err != nil {
 		return nil, errors.New("some error from analyzeStructNode 3") // TODO: add normal error return message
 	}
@@ -51,5 +34,12 @@ func analyzeStructNode(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.
 		}
 	}
 
-	return structObj, nil
+	typeObject, err := obj.NewTypeObj(f, typeSpec)
+	if err != nil {
+		return nil, errors.New("some error from analyzeStructNode 4") // TODO: add normal error return message
+	}
+
+	typeObject.EmbedObject(structObj)
+
+	return typeObject, nil
 }
