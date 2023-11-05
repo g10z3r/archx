@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"go/ast"
-	"reflect"
 	"sync"
 
-	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
@@ -23,20 +21,15 @@ type visitor struct {
 	// Data structure for the analyzed file
 	fileObj *obj.FileObj
 
-	// Used to determine the type of an ast.Node.
-	// This function helps identify the specific type of a node within the abstract syntax tree (AST).
-	determinator func(ast.Node) reflect.Type
-
 	// Created map of analyzers for a specific file
-	analyzerMap analyzer.AnalyzerMap[reflect.Type, ast.Node, obj.Object]
+	analyzerMap AnalyzerGroup
 
 	once sync.Once
 }
 
 type visitorConfig struct {
-	file         *obj.FileObj
-	alzMap       analyzer.AnalyzerMap[reflect.Type, ast.Node, obj.Object]
-	determinator func(ast.Node) reflect.Type
+	file   *obj.FileObj
+	alzMap AnalyzerGroup
 }
 
 func NewVisitor(cfg visitorConfig) *visitor {
@@ -44,7 +37,6 @@ func NewVisitor(cfg visitorConfig) *visitor {
 	v.once.Do(func() {
 		v.fileObj = cfg.file
 		v.analyzerMap = cfg.alzMap
-		v.determinator = cfg.determinator
 
 	})
 
@@ -56,7 +48,7 @@ func (v *visitor) VisitWithContext(ctx context.Context, node ast.Node) Visitor {
 		return v
 	}
 
-	analyzer, ok := v.analyzerMap[v.determinator(node)]
+	analyzer, ok := v.analyzerMap.Search(node)
 	if !ok {
 		return v
 	}

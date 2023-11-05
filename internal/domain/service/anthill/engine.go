@@ -24,11 +24,7 @@ type Engine struct {
 	// Map of functions of analyzer creators. The map key is the analyzer key,
 	// which is identical to the key for the already created analyzer in the map of analyzers.
 	// Used to create a map of analyzers for each visitor.
-	analyzerFactoryMap EngineAFMap
-
-	// Used to determine the type of an ast.Node.
-	// This function helps identify the specific type of a node within the abstract syntax tree (AST).
-	determinator func(ast.Node) reflect.Type
+	analyzerFactoryMap AnalyzerFactoryGroup
 
 	mutex sync.RWMutex
 	once  sync.Once
@@ -40,7 +36,7 @@ type Engine struct {
 type EngineConfig struct {
 	ModuleName         string
 	Determinator       func(ast.Node) reflect.Type
-	AnalyzerFactoryMap EngineAFMap
+	AnalyzerFactoryMap AnalyzerFactoryGroup
 }
 
 func NewEngine(cfg *EngineConfig) *Engine {
@@ -48,7 +44,6 @@ func NewEngine(cfg *EngineConfig) *Engine {
 	engine.once.Do(func() {
 		engine.ModuleName = cfg.ModuleName
 		engine.analyzerFactoryMap = cfg.AnalyzerFactoryMap
-		engine.determinator = cfg.Determinator
 	})
 
 	return engine
@@ -144,9 +139,8 @@ func (e *Engine) parsePkg(fset *token.FileSet, pkgAst *ast.Package, targetDir st
 func (e *Engine) parseFile(fset *token.FileSet, fileAst *ast.File, fileName string) *obj.FileObj {
 	fileObj := obj.NewFileObj(fset, e.ModuleName, filepath.Base(fileName))
 	visitor := NewVisitor(visitorConfig{
-		file:         fileObj,
-		alzMap:       e.analyzerFactoryMap.Initialize(fileObj), // Initializing the analyzer map
-		determinator: e.determinator,
+		file:   fileObj,
+		alzMap: e.analyzerFactoryMap.Make(fileObj), // Initializing the analyzer map
 	})
 
 	WalkWithContext(context.Background(), visitor, fileAst)

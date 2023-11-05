@@ -66,7 +66,6 @@ func main() {
 
 	compass := anthill.NewEngine(&anthill.EngineConfig{
 		AnalyzerFactoryMap: getAnalyzers(),
-		Determinator:       baseNodeDeterminator,
 		ModuleName:         clct.GetInfo().ModuleName,
 	})
 
@@ -118,31 +117,11 @@ func main() {
 }
 
 // TODO: tmp func
-func getAnalyzers() anthill.EngineAFMap {
-	return anthill.EngineAFMap{
+func getAnalyzers() anthill.AnalyzerFactoryGroup {
+	return anthill.AnalyzerFactoryGroup{
 		reflect.TypeOf(new(ast.ImportSpec)): analyzer.NewImportSpecAnalyzer,
 		reflect.TypeOf(new(ast.FuncDecl)):   analyzer.NewFuncDeclAnalyzer,
 		reflect.TypeOf(new(ast.StructType)): analyzer.NewStructTypeAnalyzer,
 		reflect.TypeOf(new(ast.FuncType)):   analyzer.NewFuncTypeAnalyzer,
 	}
-}
-
-func baseNodeDeterminator(node ast.Node) reflect.Type {
-	switch n := node.(type) {
-	case *ast.ImportSpec:
-		return reflect.TypeOf(new(ast.ImportSpec))
-	case *ast.FuncDecl:
-		return reflect.TypeOf(new(ast.FuncDecl))
-	// case *ast.FuncType:
-	// 	return anthill.FuncNodeType
-	case *ast.TypeSpec:
-		switch n.Type.(type) {
-		case *ast.StructType:
-			return reflect.TypeOf(new(ast.StructType))
-		case *ast.FuncType:
-			return reflect.TypeOf(new(ast.FuncType))
-		}
-	}
-
-	return nil
 }
