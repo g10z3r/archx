@@ -1,6 +1,6 @@
 module github.com/g10z3r/archx
 
-go 1.20
+go 1.21
 
 require (
 	go.mongodb.org/mongo-driver v1.12.1
