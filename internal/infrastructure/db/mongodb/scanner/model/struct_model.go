@@ -62,7 +62,7 @@ func MapStructEntity(e *obj.StructTypeObj) *StructDAO {
 	}
 }
 
-func mapFieldEntity(e *obj.FieldObj) *FieldDAO {
+func mapFieldEntity(e *obj.StructFieldObj) *FieldDAO {
 	var embedded *StructDAO
 	if e.Embedded != nil {
 		embedded = MapStructEntity(e.Embedded)

@@ -57,10 +57,17 @@ func analyzeFuncType(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Ob
 		return nil, fmt.Errorf("some error from analyzeStructNode : %s", reflect.TypeOf(node).String()) // TODO: add normal error return message
 	}
 
+	funcTypeObj, err := obj.NewFuncTypeObj(f.FileSet, node)
+	if err != nil {
+		return nil, fmt.Errorf("some error from analyzeStructNode %w", err) // TODO: add normal error return message
+	}
+
 	typeObject, err := obj.NewTypeObj(f, typeSpec)
 	if err != nil {
 		return nil, errors.New("some error from analyzeStructNode 4") // TODO: add normal error return message
 	}
+
+	typeObject.EmbedObject(funcTypeObj)
 
 	return typeObject, nil
 }

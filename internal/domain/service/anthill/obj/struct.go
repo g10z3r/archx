@@ -7,31 +7,36 @@ import (
 	"go/token"
 )
 
-const (
-	Embedded    = true
-	NotEmbedded = false
+type (
+	StructObjMeta struct {
+		LineCount int
+	}
+
+	// TODO: get rid of this structure
+	StructFieldObj struct {
+		Name       string
+		Type       string
+		Embedded   *StructTypeObj
+		Visibility bool
+	}
+
+	StructTypeObj struct {
+		Name       *string
+		Fields     []*StructFieldObj
+		Deps       map[string]*DependencyObj
+		Incomplete bool
+		Valid      bool
+		Metadata   *StructObjMeta
+	}
 )
-
-type StructObjMeta struct {
-	LineCount int
-}
-
-type StructTypeObj struct {
-	Name         *string
-	Fields       []*FieldObj
-	Dependencies map[string]*DependencyObj
-	Incomplete   bool
-	Valid        bool
-	Metadata     *StructObjMeta
-}
 
 func (o *StructTypeObj) Type() string {
 	return "struct"
 }
 
 func (o *StructTypeObj) AddDependency(importIndex int, element string) {
-	if _, exists := o.Dependencies[element]; !exists {
-		o.Dependencies[element] = &DependencyObj{
+	if _, exists := o.Deps[element]; !exists {
+		o.Deps[element] = &DependencyObj{
 			ImportIndex: importIndex,
 			Usage:       1,
 		}
@@ -39,42 +44,45 @@ func (o *StructTypeObj) AddDependency(importIndex int, element string) {
 		return
 	}
 
-	o.Dependencies[element].Usage++
+	o.Deps[element].Usage++
 }
 
 func NewStructObj(fset *token.FileSet, node ast.Node, name *string) (*StructTypeObj, []UsedPackage, error) {
-	var structType *ast.StructType
-
-	typeSpec, ok := node.(*ast.TypeSpec)
-	if ok {
-		structType, ok = typeSpec.Type.(*ast.StructType)
-		if !ok {
-			return nil, nil, errors.New("some error from NewStructObj 1") // TODO: add normal error return message
-		}
-	} else {
-		structType, ok = node.(*ast.StructType)
-		if !ok {
-			return nil, nil, errors.New("some error from NewStructObj 2") // TODO: add normal error return message
-		}
+	structType, err := extractStructType(node)
+	if err != nil {
+		return nil, nil, fmt.Errorf("node is not a TypeSpec or StructType: %w", err)
 	}
 
 	extractedFieldsData, err := extractFieldMap(fset, structType.Fields.List)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to extract field map: %w", err)
+		return nil, nil, fmt.Errorf("failed to extract struct field map: %w", err)
 	}
 
-	return &StructTypeObj{
-			Name:         name,
-			Fields:       extractedFieldsData.fieldsSet,
-			Dependencies: make(map[string]*DependencyObj, len(extractedFieldsData.usedPackages)),
-			Incomplete:   structType.Incomplete,
-			Valid:        structType.Struct.IsValid(),
-			Metadata: &StructObjMeta{
-				LineCount: CalcEntityLOC(fset, structType),
-			},
+	structObj := &StructTypeObj{
+		Name:       name,
+		Fields:     extractedFieldsData.fieldsSet,
+		Deps:       make(map[string]*DependencyObj, len(extractedFieldsData.usedPackages)),
+		Incomplete: structType.Incomplete,
+		Valid:      structType.Struct.IsValid(),
+		Metadata: &StructObjMeta{
+			LineCount: CalcEntityLOC(fset, structType),
 		},
-		extractedFieldsData.usedPackages,
-		nil
+	}
+
+	return structObj, extractedFieldsData.usedPackages, nil
+}
+
+// Attempts to extract *ast.StructType from the given AST node.
+func extractStructType(node ast.Node) (*ast.StructType, error) {
+	switch n := node.(type) {
+	case *ast.TypeSpec:
+		if structType, ok := n.Type.(*ast.StructType); ok {
+			return structType, nil
+		}
+	case *ast.StructType:
+		return n, nil
+	}
+	return nil, errors.New("node does not contain a StructType")
 }
 
 type UsedPackage struct {
@@ -83,7 +91,7 @@ type UsedPackage struct {
 }
 
 func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*extractedFieldsData, error) {
-	fields := make([]*FieldObj, 0, len(fieldList))
+	fields := make([]*StructFieldObj, 0, len(fieldList))
 	usedPackages := make([]UsedPackage, 0, len(fieldList))
 
 	for _, field := range fieldList {
@@ -97,7 +105,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*extractedFie
 		}
 
 		if len(field.Names) == 0 {
-			fields = append(fields, &FieldObj{
+			fields = append(fields, &StructFieldObj{
 				Type:       fieldMetaData.Type,
 				Embedded:   fieldMetaData.EmbeddedStruct,
 				Visibility: false,
@@ -107,7 +115,7 @@ func extractFieldMap(fset *token.FileSet, fieldList []*ast.Field) (*extractedFie
 		}
 
 		for _, name := range field.Names {
-			fields = append(fields, &FieldObj{
+			fields = append(fields, &StructFieldObj{
 				Name:       name.Name,
 				Type:       fieldMetaData.Type,
 				Embedded:   fieldMetaData.EmbeddedStruct,

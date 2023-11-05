@@ -65,37 +65,3 @@ func ExtractExprAsType(fset *token.FileSet, expr ast.Node) (*exprTypeMetaData, e
 		}, nil
 	}
 }
-
-func extractTypeParams(fset *token.FileSet, n ast.Node) {
-	ts, ok := n.(*ast.TypeSpec)
-
-	fmt.Println(ok)
-
-	if ts == nil {
-		return
-	}
-
-	// Проверяем, есть ли у структуры параметры типа
-	// _, ok := ts.Type.(*ast.StructType)
-	// if !ok {
-	// 	return
-	// }
-
-	// Проверяем, использует ли определение структуры дженерики
-	if ts.TypeParams != nil {
-		fm, err := extractFieldMap(fset, ts.TypeParams.List)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		for _, f := range fm.fieldsSet {
-			fmt.Println(f.Name, f.Type)
-		}
-
-		// for _, field := range ts.TypeParams.List {
-		// 	for _, name := range field.Names {
-		// 		fmt.Printf("Найдена структура с дженериком: %s, Поле: %s\n", ts.Name.Name, name.Name, name.)
-		// 	}
-		// }
-	}
-}

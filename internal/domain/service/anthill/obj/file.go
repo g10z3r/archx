@@ -17,11 +17,13 @@ type FileObjImportTree struct {
 }
 
 type FileObjEntitySet struct {
-	Imports         *FileObjImportTree
-	Types           []*TypeObj
+	Imports *FileObjImportTree
+	Types   []*TypeObj
+	Decls   []*DeclObj
+
 	Structs         []*StructTypeObj
 	StructIndexes   map[string]int
-	Functions       []*FuncTypeObj
+	Functions       []*FuncDeclObj
 	FunctionIndexes map[string]int
 }
 
@@ -50,7 +52,7 @@ func (o *FileObj) Save(object Object) error {
 		o.AppendImport(obj)
 		return nil
 
-	case *FuncTypeObj:
+	case *FuncDeclObj:
 		o.AppendFunc(obj)
 		return nil
 
@@ -62,6 +64,10 @@ func (o *FileObj) Save(object Object) error {
 		o.AppendType(obj)
 		return nil
 
+	case *DeclObj:
+		o.AppendDecl(obj)
+		return nil
+
 	default:
 		return errors.New(fmt.Sprintf("%s: invalid object type", reflect.TypeOf(obj)))
 	}
@@ -70,6 +76,12 @@ func (o *FileObj) Save(object Object) error {
 func (o *FileObj) AppendType(typ *TypeObj) {
 	o.mutex.Lock()
 	o.Entities.Types = append(o.Entities.Types, typ)
+	o.mutex.Unlock()
+}
+
+func (o *FileObj) AppendDecl(decl *DeclObj) {
+	o.mutex.Lock()
+	o.Entities.Decls = append(o.Entities.Decls, decl)
 	o.mutex.Unlock()
 }
 
@@ -104,7 +116,7 @@ func (o *FileObj) AppendStruct(obj *StructTypeObj) {
 	o.mutex.Unlock()
 }
 
-func (o *FileObj) AppendFunc(obj *FuncTypeObj) {
+func (o *FileObj) AppendFunc(obj *FuncDeclObj) {
 	o.mutex.Lock()
 
 	if obj.Receiver != nil {
@@ -130,7 +142,7 @@ func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 			Types:           make([]*TypeObj, 0),
 			Structs:         make([]*StructTypeObj, 0),
 			StructIndexes:   make(map[string]int),
-			Functions:       make([]*FuncTypeObj, 0),
+			Functions:       make([]*FuncDeclObj, 0),
 			FunctionIndexes: make(map[string]int),
 		},
 		Metadata: &FileObjMeta{

@@ -12,7 +12,7 @@ type TypeObj struct {
 	End   token.Pos
 	Name  string
 	Obj   EmbeddedObject
-	Gens  []*FieldObj               // generic type params
+	Gens  []*StructFieldObj         // generic type params
 	Deps  map[string]*DependencyObj // typed dependencies
 }
 
@@ -25,11 +25,11 @@ func (o *TypeObj) Type() string {
 }
 
 func NewTypeObj(fobj *FileObj, ts *ast.TypeSpec) (*TypeObj, error) {
-	var generics []*FieldObj
+	var generics []*StructFieldObj
 	var deps map[string]*DependencyObj
 
 	if ts.TypeParams != nil {
-		generics = make([]*FieldObj, 0, len(ts.TypeParams.List))
+		generics = make([]*StructFieldObj, 0, len(ts.TypeParams.List))
 
 		extractedFieldsData, err := extractFieldMap(fobj.FileSet, ts.TypeParams.List)
 		if err != nil {

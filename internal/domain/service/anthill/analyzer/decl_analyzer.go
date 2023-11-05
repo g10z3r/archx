@@ -29,13 +29,15 @@ func analyzeFuncDecl(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Ob
 		return nil, errors.New("some error from analyzeFuncNode 3") // TODO: add normal error return message
 	}
 
-	funcObj := obj.NewFuncObj(f.FileSet, funcDecl, params, deps, ps)
+	funcObj := obj.NewFuncDeclObj(f.FileSet, funcDecl, params, deps, ps)
 
 	if err := inspectFuncBody(funcDecl, funcObj, f.Entities.Imports.InternalImportsMeta); err != nil {
 		return nil, errors.New("some error from analyzeFuncNode 4") // TODO: add normal error return message
 	}
 
-	return funcObj, nil
+	declObj := obj.NewDeclObj(node, funcObj)
+
+	return declObj, nil
 }
 
 func getParentStruct(funcDecl *ast.FuncDecl) (*ast.Ident, error) {
@@ -60,7 +62,7 @@ func getParentStruct(funcDecl *ast.FuncDecl) (*ast.Ident, error) {
 	return nil, errors.New("invalid receiver type in method declaration")
 }
 
-func inspectFuncBody(funcDecl *ast.FuncDecl, funcEntity *obj.FuncTypeObj, impMeta map[string]int) error {
+func inspectFuncBody(funcDecl *ast.FuncDecl, funcEntity *obj.FuncDeclObj, impMeta map[string]int) error {
 	// get the receiver's name if it is a structure method
 	var receiverName string
 	if funcDecl.Recv != nil && len(funcDecl.Recv.List) > 0 {
@@ -73,11 +75,14 @@ func inspectFuncBody(funcDecl *ast.FuncDecl, funcEntity *obj.FuncTypeObj, impMet
 			if ident, ok := expr.X.(*ast.Ident); ok {
 				// structure field call found
 				if ident.Name == receiverName {
-					if usage, exists := funcEntity.Fields[expr.Sel.Name]; !exists {
-						funcEntity.Fields[expr.Sel.Name] = usage
+					// TODO: bug here
+					// if a call to a structure method is encountered,
+					// then the method name is included in the list of used fields
+					if usage, exists := funcEntity.FieldAccess[expr.Sel.Name]; !exists {
+						funcEntity.FieldAccess[expr.Sel.Name] = usage
 					}
 
-					funcEntity.Fields[expr.Sel.Name]++
+					funcEntity.FieldAccess[expr.Sel.Name]++
 				}
 
 				// found using another internal package
@@ -107,8 +112,10 @@ func inspectFuncBody(funcDecl *ast.FuncDecl, funcEntity *obj.FuncTypeObj, impMet
 	return nil
 }
 
-type funcObjParamMap map[string]*obj.FuncObjParam
-type depObjMap map[string]*obj.DependencyObj
+type (
+	funcObjParamMap map[string]*obj.FuncObjParam
+	depObjMap       map[string]*obj.DependencyObj
+)
 
 func processFuncParams(fset *token.FileSet, funcDecl *ast.FuncDecl, impMeta map[string]int) (funcObjParamMap, depObjMap, error) {
 	var params map[string]*obj.FuncObjParam
