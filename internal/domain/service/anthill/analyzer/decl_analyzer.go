@@ -3,10 +3,8 @@ package analyzer
 import (
 	"context"
 	"errors"
-	"fmt"
 	"go/ast"
 	"go/token"
-	"reflect"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
@@ -16,27 +14,6 @@ func NewFuncDeclAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
 		file,
 		analyzeFuncDecl,
 	)
-}
-
-func NewFuncTypeAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
-	return NewAnalyzer[ast.Node, obj.Object](
-		file,
-		analyzeFuncType,
-	)
-}
-
-func analyzeFuncType(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
-	typeSpec, ok := node.(*ast.TypeSpec)
-	if !ok {
-		return nil, fmt.Errorf("some error from analyzeStructNode : %s", reflect.TypeOf(node).String()) // TODO: add normal error return message
-	}
-
-	typeObject, err := obj.NewTypeObj(f, typeSpec)
-	if err != nil {
-		return nil, errors.New("some error from analyzeStructNode 4") // TODO: add normal error return message
-	}
-
-	return typeObject, nil
 }
 
 func analyzeFuncDecl(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {

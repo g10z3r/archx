@@ -16,11 +16,6 @@ func NewImportSpecAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
 	)
 }
 
-// func checkImportNode(node ast.Node) bool {
-// 	_, ok := node.(*ast.ImportSpec)
-// 	return ok
-// }
-
 func analyzeImportSpec(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
 	importSpec, _ := node.(*ast.ImportSpec)
 

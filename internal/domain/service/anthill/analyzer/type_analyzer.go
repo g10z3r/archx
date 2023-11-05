@@ -10,6 +10,13 @@ import (
 	"github.com/g10z3r/archx/internal/domain/service/anthill/obj"
 )
 
+func NewFuncTypeAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
+	return NewAnalyzer[ast.Node, obj.Object](
+		file,
+		analyzeFuncType,
+	)
+}
+
 func NewStructTypeAnalyzer(file *obj.FileObj) Analyzer[ast.Node, obj.Object] {
 	return NewAnalyzer[ast.Node, obj.Object](
 		file,
@@ -40,6 +47,20 @@ func analyzeStructType(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.
 	}
 
 	typeObject.EmbedObject(structObj)
+
+	return typeObject, nil
+}
+
+func analyzeFuncType(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Object, error) {
+	typeSpec, ok := node.(*ast.TypeSpec)
+	if !ok {
+		return nil, fmt.Errorf("some error from analyzeStructNode : %s", reflect.TypeOf(node).String()) // TODO: add normal error return message
+	}
+
+	typeObject, err := obj.NewTypeObj(f, typeSpec)
+	if err != nil {
+		return nil, errors.New("some error from analyzeStructNode 4") // TODO: add normal error return message
+	}
 
 	return typeObject, nil
 }
