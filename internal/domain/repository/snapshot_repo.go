@@ -24,6 +24,6 @@ type ImportAccessor interface {
 }
 
 type StructAccessor interface {
-	Append(ctx context.Context, structEntity *obj.StructObj, structIndex int, pkgPath string) error
+	Append(ctx context.Context, structEntity *obj.StructTypeObj, structIndex int, pkgPath string) error
 	// AddMethod(ctx context.Context, methodEntity *entity.MethodEntity, structIndex int, pkgPath string) error
 }

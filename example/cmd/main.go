@@ -23,6 +23,8 @@ import (
 // 	Go
 // }
 
+type SomeFunc[G comparable] func(a int, b string, g G) (uint, error)
+
 type Address struct {
 	street, city string
 	state        string

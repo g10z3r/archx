@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go/ast"
+	"reflect"
 	"sync"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
@@ -11,7 +12,7 @@ import (
 )
 
 type Visitor interface {
-	// Custom implementation of standard the ast.Walk function.
+	// Custom implementation of a standard ast.Walk function.
 	// Was implemented because the standard ast.Walk function does not have a context inside.
 	VisitWithContext(ctx context.Context, node ast.Node) (w Visitor)
 }
@@ -24,18 +25,18 @@ type visitor struct {
 
 	// Used to determine the type of an ast.Node.
 	// This function helps identify the specific type of a node within the abstract syntax tree (AST).
-	determinator func(ast.Node) uint
+	determinator func(ast.Node) reflect.Type
 
 	// Created map of analyzers for a specific file
-	analyzerMap analyzer.AnalyzerMap[uint, ast.Node, obj.Object]
+	analyzerMap analyzer.AnalyzerMap[reflect.Type, ast.Node, obj.Object]
 
 	once sync.Once
 }
 
 type visitorConfig struct {
 	file         *obj.FileObj
-	alzMap       analyzer.AnalyzerMap[uint, ast.Node, obj.Object]
-	determinator func(ast.Node) uint
+	alzMap       analyzer.AnalyzerMap[reflect.Type, ast.Node, obj.Object]
+	determinator func(ast.Node) reflect.Type
 }
 
 func NewVisitor(cfg visitorConfig) *visitor {

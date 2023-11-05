@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path/filepath"
+	"reflect"
 	"sync"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill/event"
@@ -27,7 +28,7 @@ type Engine struct {
 
 	// Used to determine the type of an ast.Node.
 	// This function helps identify the specific type of a node within the abstract syntax tree (AST).
-	determinator func(ast.Node) uint
+	determinator func(ast.Node) reflect.Type
 
 	mutex sync.RWMutex
 	once  sync.Once
@@ -38,7 +39,7 @@ type Engine struct {
 
 type EngineConfig struct {
 	ModuleName         string
-	Determinator       func(ast.Node) uint
+	Determinator       func(ast.Node) reflect.Type
 	AnalyzerFactoryMap EngineAFMap
 }
 

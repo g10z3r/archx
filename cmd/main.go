@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"log"
 	"log/slog"
+	"reflect"
 
 	"github.com/g10z3r/archx/internal/domain/service/anthill"
 	"github.com/g10z3r/archx/internal/domain/service/anthill/analyzer"
@@ -119,34 +120,29 @@ func main() {
 // TODO: tmp func
 func getAnalyzers() anthill.EngineAFMap {
 	return anthill.EngineAFMap{
-		anthill.ImportNodeType: analyzer.NewImportAnalyzer,
-		anthill.FuncNodeType:   analyzer.NewFuncAnalyzer,
-		anthill.StructNodeType: analyzer.NewStructAnalyzer,
+		reflect.TypeOf(new(ast.ImportSpec)): analyzer.NewImportSpecAnalyzer,
+		reflect.TypeOf(new(ast.FuncDecl)):   analyzer.NewFuncDeclAnalyzer,
+		reflect.TypeOf(new(ast.StructType)): analyzer.NewStructTypeAnalyzer,
+		reflect.TypeOf(new(ast.FuncType)):   analyzer.NewFuncTypeAnalyzer,
 	}
 }
 
-func baseNodeDeterminator(node ast.Node) uint {
+func baseNodeDeterminator(node ast.Node) reflect.Type {
 	switch n := node.(type) {
 	case *ast.ImportSpec:
-		return anthill.ImportNodeType
+		return reflect.TypeOf(new(ast.ImportSpec))
 	case *ast.FuncDecl:
-		return anthill.FuncNodeType
+		return reflect.TypeOf(new(ast.FuncDecl))
 	// case *ast.FuncType:
 	// 	return anthill.FuncNodeType
 	case *ast.TypeSpec:
 		switch n.Type.(type) {
 		case *ast.StructType:
-			return anthill.StructNodeType
+			return reflect.TypeOf(new(ast.StructType))
+		case *ast.FuncType:
+			return reflect.TypeOf(new(ast.FuncType))
 		}
 	}
 
-	return 0
+	return nil
 }
-
-// func getAnalyzers() anthill.EngineAFMap {
-// 	return anthill.EngineAFMap{
-// 		reflect.TypeOf(new(ast.ImportSpec)): analyzer.NewImportAnalyzer,
-// 		reflect.TypeOf(new(ast.FuncDecl)):   analyzer.NewFuncAnalyzer,
-// 		reflect.TypeOf(new(ast.TypeSpec)):   analyzer.NewStructAnalyzer,
-// 	}
-// }
