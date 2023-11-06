@@ -22,7 +22,7 @@ type visitor struct {
 	fileObj *obj.FileObj
 
 	// Created map of analyzers for a specific file
-	analyzerMap AnalyzerGroup
+	analyzerGroup AnalyzerGroup
 
 	once sync.Once
 }
@@ -36,7 +36,7 @@ func NewVisitor(cfg visitorConfig) *visitor {
 	v := new(visitor)
 	v.once.Do(func() {
 		v.fileObj = cfg.file
-		v.analyzerMap = cfg.alzMap
+		v.analyzerGroup = cfg.alzMap
 
 	})
 
@@ -48,7 +48,7 @@ func (v *visitor) VisitWithContext(ctx context.Context, node ast.Node) Visitor {
 		return v
 	}
 
-	analyzer, ok := v.analyzerMap.Search(node)
+	analyzer, ok := v.analyzerGroup.Search(node)
 	if !ok {
 		return v
 	}
