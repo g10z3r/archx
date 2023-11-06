@@ -29,14 +29,13 @@ func analyzeFuncDecl(ctx context.Context, f *obj.FileObj, node ast.Node) (obj.Ob
 		return nil, errors.New("some error from analyzeFuncNode 3") // TODO: add normal error return message
 	}
 
-	funcObj := obj.NewFuncDeclObj(f.FileSet, funcDecl, params, deps, ps)
+	funcDeclObj := obj.NewFuncDeclObj(f.FileSet, funcDecl, params, deps, ps)
 
-	if err := inspectFuncBody(funcDecl, funcObj, f.Entities.Imports.InternalImportsMeta); err != nil {
+	if err := inspectFuncBody(funcDecl, funcDeclObj, f.Entities.Imports.InternalImportsMeta); err != nil {
 		return nil, errors.New("some error from analyzeFuncNode 4") // TODO: add normal error return message
 	}
 
-	declObj := obj.NewDeclObj(node, funcObj)
-
+	declObj := obj.NewDeclObj(f.FileSet, node, funcDeclObj, funcDeclObj.Name)
 	return declObj, nil
 }
 
@@ -95,14 +94,14 @@ func inspectFuncBody(funcDecl *ast.FuncDecl, funcEntity *obj.FuncDeclObj, impMet
 			// check for recursion in regular functions
 			if ident, ok := expr.Fun.(*ast.Ident); ok {
 				if ident.Name == funcEntity.Name {
-					funcEntity.Metadata.IsRecursive = true
+					funcEntity.Recursive = true
 				}
 			}
 
 			// check for recursion in methods
 			if sel, ok := expr.Fun.(*ast.SelectorExpr); ok {
 				if ident, ok := sel.X.(*ast.Ident); ok && ident.Name == receiverName && sel.Sel.Name == funcEntity.Name {
-					funcEntity.Metadata.IsRecursive = true
+					funcEntity.Recursive = true
 				}
 			}
 		}
