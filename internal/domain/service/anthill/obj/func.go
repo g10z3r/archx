@@ -21,6 +21,7 @@ type (
 		Params         map[string]*FuncObjParam
 		Dependencies   map[string]*DependencyObj
 		Visibility     bool
+		Arity          int
 		ReturnCount    int
 		Recursive      bool
 		HasSideEffects bool
@@ -51,6 +52,7 @@ func NewFuncDeclObj(fset *token.FileSet, res *ast.FuncDecl, params map[string]*F
 	funcDeclObj.Dependencies = initDeps
 	funcDeclObj.Params = params
 	funcDeclObj.Visibility = unicode.IsUpper(rune(res.Name.Name[0]))
+	funcDeclObj.Arity = len(params)
 
 	if receiver != nil {
 		// Adding a `$` sign to distinguish between method names and regular function names.
