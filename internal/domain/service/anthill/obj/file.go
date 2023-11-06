@@ -18,13 +18,11 @@ type FileObjImportTree struct {
 
 type FileObjEntitySet struct {
 	Imports *FileObjImportTree
-	Types   []*TypeObj
-	Decls   []*DeclObj
 
-	Structs         []*StructTypeObj
-	StructIndexes   map[string]int
-	Functions       []*FuncDeclObj
-	FunctionIndexes map[string]int
+	Types        []*TypeObj
+	TypesIndexes map[string]int
+	Decls        []*DeclObj
+	DeclIndexes  map[string]int
 }
 
 type FileObjStats struct {
@@ -52,14 +50,6 @@ func (o *FileObj) Save(object Object) error {
 		o.AppendImport(obj)
 		return nil
 
-	case *FuncDeclObj:
-		o.AppendFunc(obj)
-		return nil
-
-	case *StructTypeObj:
-		o.AppendStruct(obj)
-		return nil
-
 	case *TypeObj:
 		o.AppendType(obj)
 		return nil
@@ -75,12 +65,16 @@ func (o *FileObj) Save(object Object) error {
 
 func (o *FileObj) AppendType(typ *TypeObj) {
 	o.mutex.Lock()
+	o.Entities.TypesIndexes[typ.Name] = len(o.Entities.Types)
 	o.Entities.Types = append(o.Entities.Types, typ)
 	o.mutex.Unlock()
 }
 
 func (o *FileObj) AppendDecl(decl *DeclObj) {
 	o.mutex.Lock()
+
+	// TODO: obj.Name = "$" + obj.Name
+	o.Entities.DeclIndexes[decl.Name] = len(o.Entities.Decls)
 	o.Entities.Decls = append(o.Entities.Decls, decl)
 	o.mutex.Unlock()
 }
@@ -109,24 +103,24 @@ func (o *FileObj) AppendImport(obj *ImportObj) {
 	o.mutex.Unlock()
 }
 
-func (o *FileObj) AppendStruct(obj *StructTypeObj) {
-	o.mutex.Lock()
-	o.Entities.StructIndexes[*obj.Name] = len(o.Entities.Structs)
-	o.Entities.Structs = append(o.Entities.Structs, obj)
-	o.mutex.Unlock()
-}
+// func (o *FileObj) AppendStruct(obj *StructTypeObj) {
+// 	o.mutex.Lock()
+// 	o.Entities.StructIndexes[*obj.Name] = len(o.Entities.Structs)
+// 	o.Entities.Structs = append(o.Entities.Structs, obj)
+// 	o.mutex.Unlock()
+// }
 
-func (o *FileObj) AppendFunc(obj *FuncDeclObj) {
-	o.mutex.Lock()
+// func (o *FileObj) AppendFunc(obj *FuncDeclObj) {
+// 	o.mutex.Lock()
 
-	if obj.Receiver != nil {
-		obj.Name = "$" + obj.Name
-	}
+// 	if obj.Receiver != nil {
+// 		obj.Name = "$" + obj.Name
+// 	}
 
-	o.Entities.FunctionIndexes[obj.Name] = len(o.Entities.Functions)
-	o.Entities.Functions = append(o.Entities.Functions, obj)
-	o.mutex.Unlock()
-}
+// 	o.Entities.FunctionIndexes[obj.Name] = len(o.Entities.Functions)
+// 	o.Entities.Functions = append(o.Entities.Functions, obj)
+// 	o.mutex.Unlock()
+// }
 
 func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 	return &FileObj{
@@ -139,11 +133,10 @@ func NewFileObj(fset *token.FileSet, moduleName, fileName string) *FileObj {
 				SideEffectImports:   make([]string, 0),
 				InternalImportsMeta: make(map[string]int),
 			},
-			Types:           make([]*TypeObj, 0),
-			Structs:         make([]*StructTypeObj, 0),
-			StructIndexes:   make(map[string]int),
-			Functions:       make([]*FuncDeclObj, 0),
-			FunctionIndexes: make(map[string]int),
+			Types:        make([]*TypeObj, 0),
+			TypesIndexes: make(map[string]int),
+			Decls:        make([]*DeclObj, 0),
+			DeclIndexes:  make(map[string]int),
 		},
 		Metadata: &FileObjMeta{
 			Module: moduleName,

@@ -9,29 +9,21 @@ import (
 )
 
 type (
-	FuncObjMeta struct {
-		LineCount      int
-		Arity          int
-		ReturnCount    int
-		IsRecursive    bool
-		HasSideEffects bool
-	}
-
 	FuncObjParam struct {
 		Type  string
 		Usage int
 	}
 
 	FuncDeclObj struct {
-		Start        token.Pos
-		End          token.Pos
-		Name         string
-		Receiver     *string
-		FieldAccess  map[string]int
-		Parameters   map[string]*FuncObjParam
-		Dependencies map[string]*DependencyObj
-		Visibility   bool
-		Metadata     *FuncObjMeta
+		Name           string
+		Receiver       *string
+		FieldAccess    map[string]int
+		Params         map[string]*FuncObjParam
+		Dependencies   map[string]*DependencyObj
+		Visibility     bool
+		ReturnCount    int
+		Recursive      bool
+		HasSideEffects bool
 	}
 )
 
@@ -53,28 +45,22 @@ func (o *FuncDeclObj) AddDependency(importIndex int, element string) {
 }
 
 func NewFuncDeclObj(fset *token.FileSet, res *ast.FuncDecl, params map[string]*FuncObjParam, initDeps map[string]*DependencyObj, receiver *ast.Ident) *FuncDeclObj {
-	var receiverName *string
-	var fields map[string]int
+	funcDeclObj := new(FuncDeclObj)
+
+	funcDeclObj.Name = res.Name.Name
+	funcDeclObj.Dependencies = initDeps
+	funcDeclObj.Params = params
+	funcDeclObj.Visibility = unicode.IsUpper(rune(res.Name.Name[0]))
 
 	if receiver != nil {
-		receiverName = &receiver.Name
-		fields = make(map[string]int)
+		// Adding a `$` sign to distinguish between method names and regular function names.
+		// To use function names as declaration map keys in a file object
+		funcDeclObj.Name = "$" + funcDeclObj.Name
+		funcDeclObj.Receiver = &receiver.Name
+		funcDeclObj.FieldAccess = make(map[string]int)
 	}
 
-	return &FuncDeclObj{
-		Start:        res.Pos(),
-		End:          res.End(),
-		Name:         res.Name.Name,
-		Receiver:     receiverName,
-		FieldAccess:  fields,
-		Dependencies: initDeps,
-		Parameters:   params,
-		Visibility:   unicode.IsUpper(rune(res.Name.Name[0])),
-		Metadata: &FuncObjMeta{
-			LineCount: CalcEntityLOC(fset, res),
-			Arity:     len(params),
-		},
-	}
+	return funcDeclObj
 }
 
 type (
